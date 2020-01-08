@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+	xmlns="http://www.w3.org/2000/svg"
+	version="1.1"
+	viewBox="0 0 180 100"
+	height="100"
+	width="180">
+
+	<defs>
+		<g id="panel">
+			<rect 
+				style="fill:#6c5d53;"
+				x="0"
+				y="0"
+				width="140"
+				height="20"
+				id="base"
+			/>
+			<rect 
+				style="fill:#917c6f;"
+				x="0"
+				y="0"
+				width="140"
+				height="1"
+				id="light"
+			/>
+			<rect 
+				style="fill:#483e37;"
+				x="0"
+				y="19"
+				width="140"
+				height="1"
+				id="dark"
+			/>
+		</g>
+		<g id="door">
+			<use href="#panel" x="20" y="20" />
+			<use href="#panel" x="20" y="40" />
+			<use href="#panel" x="20" y="60" />
+			<use href="#panel" x="20" y="80" />
+		</g>
+		<circle
+			id="progress"
+			fill="none"
+			stroke-width="10"
+			stroke="green"
+			r="36"
+			cx="70"
+			cy="40"
+		/>
+	</defs>
+
+	<clipPath id="doorClip">
+		<rect
+			x="20"
+			y="20"
+			width="140"
+			height="80"
+		/>
+	</clipPath>
+	<use clip-path="url(#doorClip)" href="#door" x="0" y="0" />
+
+	<circle
+		fill="silver"
+		fill-opacity="0.5"
+		stroke-width="10"
+		stroke="silver"
+		r="40"
+		cx="90"
+		cy="50"
+	/>
+	<!--clipPath id="progressClip">
+		<path
+			d="M90 50 h90 v-50 h-90 z"
+		/>
+	</clipPath>
+	<use clip-path="url(#progressClip)" href="#progress" x="10" y="10" /-->
+
+
+</svg>
