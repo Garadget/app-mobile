@@ -53,8 +53,8 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
       _isFirstRun = false;
       _claimCode = ModalRoute.of(context).settings.arguments as String;
       _account = Provider.of<ProviderAccount>(context, listen: false);
-      _account.initStorage();
       _account.stopTimer();
+      _account.initStorage();
       _testConnection();
     }
     super.didChangeDependencies();
@@ -65,13 +65,14 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
     if (_errorMessage != null) {
       return ErrorScreen(_errorMessage);
     } else {
+      final platform = ProviderAccount.platformString(context);
       List<Widget> tiles = [];
       if (!_isConnected) {
         tiles.add(ListTile(
           leading: CircularProgressIndicator(),
           title: Text('Connect to Garadget'),
           subtitle: Text(
-              'In WiFi settings of this mobile device connect to the access point with prefix \'$SSIDPREFIX\' then return to this app.'),
+              'In WiFi settings of this $platform device connect to the access point with prefix \'$SSIDPREFIX\' then return to this app.'),
         ));
       } else {
         tiles.add(ListTile(
@@ -115,6 +116,9 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
                         autocorrect: false,
                         autofocus: true,
                         obscureText: _isPasswordObscured,
+                        onFieldSubmitted: (_) {
+                          _handleConnect();
+                        },
                         decoration: InputTheme.of(context).copyWith(
                           labelText: 'Password',
                           suffixIcon: IconButton(
@@ -181,6 +185,9 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
               onPressed: _scanAps,
             ),
           ));
+          _scanResult.scans.sort((value1, value2) {
+            return value2.rssi - value1.rssi;
+          });
           List<Widget> wifiEntries = [];
           _scanResult.scans.forEach((item) {
             wifiEntries.add(WifiEntry(
@@ -229,44 +236,12 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
                       child: const Text('Cancel'),
                       onPressed: () {
                         Navigator.of(context).pop();
-                        Navigator.of(context).pop(true);
+                        Navigator.of(context).pop(_isComplete ? true : null);
                       },
                     ),
               RaisedButton(
                 child: const Text('Connect'),
-                onPressed: _isConnected && _isComplete
-                    ? () {
-                        if (!_formKey.currentState.validate()) {
-                          return null;
-                        }
-                        showBusyMessage(context, 'Submitting...').then((_) {
-                          return _particleSetup.setClaimCode(_claimCode);
-                        }).then((setResponse) {
-                          if (!setResponse.isOk()) {
-                            throw ('Error setting claim code');
-                          }
-                          return _particleSetup.configureAP(
-                              _selectedAp, _password, _publicKey);
-                        }).then((configResponse) {
-                          if (!configResponse.isOk()) {
-                            throw ('Error submitting connection info. Make sure you are still connected to Garadget\'s access point and try again');
-                          }
-                          return _particleSetup.connectAP();
-                        }).then((connectResponse) {
-                          if (!connectResponse.isOk()) {
-                            throw ('Error sending connect command');
-                          }
-                        }).whenComplete(() {
-                          Navigator.of(context).pop();
-                        }).then((result) {
-                          Navigator.of(context).pushNamed(
-                              ScreenDeviceAddConfirm.routeName,
-                              arguments: _deviceId);
-                        }).catchError((error) {
-                          showErrorDialog(context, 'WiFi Error', error);
-                        });
-                      }
-                    : null,
+                onPressed: _isConnected && _isComplete ? _handleConnect : null,
               ),
             ],
           ),
@@ -279,15 +254,83 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
     }
   }
 
-  void _testConnection() async {
-    if (!mounted) {
+  void _handleConnect() async {
+    if (!_formKey.currentState.validate() || !_isConnected || !_isComplete) {
       return;
     }
+    try {
+      await showBusyMessage(context, 'Submitting...');
+      final setResponse = await _particleSetup
+          .setClaimCode(
+            _claimCode,
+          )
+          .timeout(const Duration(seconds: 5),
+              onTimeout: () => throw ('Claim Code Timeout'));
+      if (!setResponse.isOk()) {
+        throw ('Error setting claim code');
+      }
+      final configResponse = await _particleSetup
+          .configureAP(
+            _selectedAp,
+            _password,
+            _publicKey,
+          )
+          .timeout(const Duration(seconds: 10),
+              onTimeout: () => throw ('AP Config Timeout'));
+      if (!configResponse.isOk()) {
+        throw ('Error submitting connection info');
+      }
+      final connectResponse = await _particleSetup.connectAP().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => throw ('AP Connect Timeout'));
+      if (!connectResponse.isOk()) {
+        throw ('Error sending connect command');
+      }
+      DeviceIdResponse deviceIdResponse;
+      try {
+        deviceIdResponse =
+            await _particleSetup.getDeviceId().timeout(Duration(seconds: 5));
+      } catch (_) {
+        // this must fail
+      }
+      if (deviceIdResponse != null && deviceIdResponse.isOk()) {
+        throw ('Did not disconnect $SSIDPREFIX');
+      }
+      Navigator.of(context).pop();
+      Navigator.of(context)
+          .pushNamed(ScreenDeviceAddConfirm.routeName, arguments: _deviceId)
+          .then((_) {
+        _testConnection();
+      });
+    } catch (error) {
+      Navigator.of(context).pop();
+      showErrorDialog(context, 'Communication Error',
+              'Reset Garadget by unplugging it from power and plugging it back so we can try again.\n\nDetails: ${error.toString()}')
+          .then((_) {
+        _scanResult = null;
+        _testConnection();
+      });
+    }
+  }
 
-    if (!_isConnecting) {
+  void _testConnection() async {
+    while (true) {
+      if (!mounted || _isConnecting) {
+        return;
+      }
+      // pause ping while scanning APs
+      if (_isScanning) {
+        await Future.delayed(Duration(milliseconds: 200));
+        continue;
+      }
       _isConnecting = true;
       try {
-        final deviceId = await _particleSetup.getDeviceId();
+//        print('ping');
+        final deviceId = await _particleSetup
+            .getDeviceId()
+            .timeout(Duration(seconds: 1), onTimeout: () {
+          throw ('timeout');
+        });
         if (deviceId.isOk()) {
           _deviceId = deviceId.deviceIdHex;
         } else {
@@ -301,60 +344,55 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
             throw ('Error getting public key');
           }
         }
-        _isConnected = true;
-      } catch (error) {
-        _isConnected = false;
-//        print(error);
-      } finally {
+//        print('pong');
         setState(() {
-          _isConnecting = false;
+          _isConnected = true;
+        });
+      } catch (error) {
+        setState(() {
+          _isConnected = false;
         });
       }
+      if (_scanResult == null) {
+        await _scanAps();
+      }
+      if (_isConnected && _scanResult != null) {
+        _isConnecting = false;
+        return;
+      }
+      await Future.delayed(Duration(seconds: 1));
+      _isConnecting = false;
     }
-    if (_scanResult == null) {
-      _scanAps();
-    }
-
-    // restart the timer
-    Future.delayed(Duration(seconds: 1)).then((_) {
-      _testConnection();
-    });
   }
 
-  void _scanAps() async {
-    if (!mounted || !_isConnected) {
+  Future<void> _scanAps() async {
+    if (!mounted || !_isConnected || _isScanning) {
       return;
     }
-
-    if (!_isScanning) {
-      setState(() {
-        _isScanning = true;
-        _isComplete = false;
-      });
-      try {
-        _scanResult = await _particleSetup.scanAP();
-        if (_selectedAp != null) {
-          // remove selected ap if not found in new scan
-          if (_scanResult.scans
-                  .indexWhere((item) => item.ssid == _selectedAp.ssid) <
-              0) {
-            _selectedAp = null;
-          }
+    setState(() {
+      _isScanning = true;
+      _isComplete = false;
+    });
+    try {
+      _scanResult = await _particleSetup.scanAP();
+      if (_selectedAp != null) {
+        // remove selected ap if not found in new scan
+        if (_scanResult.scans
+                .indexWhere((item) => item.ssid == _selectedAp.ssid) <
+            0) {
+          _selectedAp = null;
         }
-      } catch (error) {
-        print(error);
-        _isConnected = false;
-      } finally {
-        setState(() {
-          _isScanning = false;
-        });
+      }
+    } catch (error) {
+      print(error);
+      _isConnected = false;
+      if (!_isConnecting) {
+        _testConnection();
       }
     }
-
-    // reset the timer
-    if (!_isConnected) {
-      _testConnection();
-    }
+    setState(() {
+      _isScanning = false;
+    });
   }
 }
 

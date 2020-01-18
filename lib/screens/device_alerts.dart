@@ -12,6 +12,7 @@ import '../widgets/settings_header.dart';
 import '../widgets/settings_item.dart';
 import '../widgets/settings_select.dart';
 import '../widgets/settings_toggle.dart';
+import './local_auth.dart';
 
 const List<Map<String, dynamic>> VALUES_TIMEOUTALERT = [
   {'value': 0, 'text': 'Disabled'},
@@ -378,15 +379,12 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
               'Enable',
               timeoutAlert != 0,
               (value) {
-                _saveAlert(
+                _deviceSaveValue(
                         'alerts/timeoutAlert',
                         timeoutAlert == 0
                             ? _previousTimeoutAlert ??
                                 VALUES_TIMEOUTALERT[8]['value']
-                            : 0)
-                    .whenComplete(() {
-                  setState(() {});
-                });
+                            : 0);
               },
             ),
             timeoutAlert == 0
@@ -399,7 +397,7 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                       orElse: () => VALUES_TIMEOUTALERT[8],
                     ),
                     (value) {
-                      return _saveAlert('alerts/timeoutAlert', value);
+                      return _deviceSaveValue('alerts/timeoutAlert', value);
                     },
                   ),
             SettingsHeader('NIGHT ALERT'),
@@ -407,21 +405,10 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
               'Enable',
               nightAlertFrom != nightAlertTo,
               (value) {
-                _device.setValue('alerts/nightAlertFrom',
+                _deviceSaveValue('alerts/nightAlertFrom',
                     value ? _previousNightAlertFrom ?? 1320 : 0);
-                _device.setValue('alerts/nightAlertTo',
+                _deviceSaveValue('alerts/nightAlertTo',
                     value ? _previousNightAlertTo ?? 360 : 0);
-                setState(() {});
-                _device.saveConfig().then((result) {
-                  return _account.storeDevices();
-                }).catchError((error) {
-                  _errorMessage = error;
-                  // restore old values
-                  _device.setValue('alerts/nightAlertFrom', nightAlertFrom);
-                  _device.setValue('alerts/nightAlertTo', nightAlertTo);
-                }).whenComplete(() {
-                  setState(() {});
-                });
               },
             ),
             nightAlertFrom == nightAlertTo
@@ -432,7 +419,7 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                     icon: Icons.chevron_right,
                     action: (ctx) {
                       _pickTime(ctx, nightAlertFrom, (value) {
-                        _saveAlert('alerts/nightAlertFrom', _timeToInt(value));
+                        _deviceSaveValue('alerts/nightAlertFrom', _timeToInt(value));
                       });
                     },
                   ),
@@ -444,7 +431,7 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                     icon: Icons.chevron_right,
                     action: (ctx) {
                       _pickTime(ctx, nightAlertTo, (value) {
-                        _saveAlert('alerts/nightAlertTo', _timeToInt(value));
+                        _deviceSaveValue('alerts/nightAlertTo', _timeToInt(value));
                       });
                     },
                   ),
@@ -458,14 +445,7 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                       orElse: () => null,
                     ),
                     (value) {
-                      _device.setValue('alerts/timeZone', value);
-                      return _device.saveConfig().catchError((error) {
-                        _errorMessage = error;
-                        // restore old values
-                        _device.setValue('alerts/timeZone', timeZone);
-                      }).whenComplete(() {
-                        setState(() {});
-                      });
+                      return _deviceSaveValue('alerts/timeZone', value);
                     },
                   ),
             SettingsHeader('DEPARTURE ALERT'),
@@ -487,31 +467,28 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
       status,
       (allAlerts & thisAlert) != 0,
       (value) {
-        setState(() {
-          setState(() {
-            _device.setValue('alerts/statusAlert', allAlerts ^ thisAlert);
-          });
-          _device.saveConfig().then((result) {
-            return _account.storeDevices();
-          }).catchError((error) {
-            _errorMessage = error;
-            _device.setValue('alerts/statusAlert', allAlerts);
-          }).whenComplete(() {
-            setState(() {});
-          });
-        });
+        _deviceSaveValue('alerts/statusAlert', allAlerts ^ thisAlert);
       },
     );
   }
 
-  Future<void> _saveAlert(String param, int value) {
-    _device.setValue(param, value);
-    setState(() {});
-    return _device.saveConfig().then((result) {
+  Future<bool> _deviceSaveValue(String key, dynamic value) {
+    final oldValue = _device.getValue(key);
+    return localAuthChallageDialog(context, AuthLevel.ACTIONS).then((allowed) {
+      if (!allowed) {
+        return false;
+      }
+      _device.setValue(key, value);
+      return _device.saveConfig();
+    }).then((_) {
       return _account.storeDevices();
     }).catchError((error) {
       _errorMessage = error;
-      _device.setValue(param, value);
+      _device.setValue(key, oldValue);
+    }).whenComplete(() {
+      setState(() {});
+    }).then((_) {
+      return true;
     });
   }
 

@@ -3,12 +3,14 @@ import 'package:provider/provider.dart';
 
 // @todo:  use intl for internatialization
 import './providers/account.dart';
-import './providers/status.dart';
+import './providers/device_status.dart';
+import './providers/device_info.dart';
 
 import './screens/home.dart';
 import './screens/account_signup.dart';
 import './screens/account_signin.dart';
 import './screens/account_reset.dart';
+import './screens/local_auth.dart';
 import './screens/device_alerts.dart';
 import './screens/device_settings.dart';
 import './screens/device_add_intro.dart';
@@ -21,12 +23,14 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     ProviderAccount providerAccount = ProviderAccount();
-    ProviderStatus providerStatus = providerAccount.providerStatus;
+    ProviderDeviceStatus providerDeviceStatus = providerAccount.providerDeviceStatus;
+    ProviderDeviceInfo providerDeviceInfo = providerAccount.providerDeviceInfo;
 
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(builder: (_) => providerAccount),
-        ChangeNotifierProvider(builder: (_) => providerStatus),
+        ChangeNotifierProvider(builder: (_) => providerDeviceStatus),
+        ChangeNotifierProvider(builder: (_) => providerDeviceInfo),
       ],
       child: MaterialApp(
         title: 'Garadget',
@@ -73,6 +77,7 @@ class App extends StatelessWidget {
           ScreenAccountSignup.routeName: (_) => ScreenAccountSignup(),
           ScreenAccountSignin.routeName: (_) => ScreenAccountSignin(),
           ScreenAccountReset.routeName: (_) => ScreenAccountReset(),
+          ScreenLocalAuth.routeName: (_) => ScreenLocalAuth(),
           ScreenDeviceSettings.routeName: (_) => ScreenDeviceSettings(),
           ScreenDeviceAlerts.routeName: (_) => ScreenDeviceAlerts(),
           ScreenDeviceAddIntro.routeName: (_) => ScreenDeviceAddIntro(),

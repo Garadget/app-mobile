@@ -3,7 +3,7 @@ import "particle.dart" as particle;
 
 enum DoorStatus { OPEN, CLOSED, OPENING, CLOSING, STOPPED, UNKNOWN }
 enum DoorCommands { OPEN, CLOSE, STOP, NONE }
-enum ConnectionStatus { ONLINE, TIMEOUT, OFFLINE, ERROR, UNKNOWN }
+enum ConnectionStatus { ONLINE, TIMEOUT, OFFLINE, ERROR, LOADING, UNKNOWN }
 
 class Device {
   static const STKEY_CONFIG = 'config';
@@ -150,7 +150,7 @@ class Device {
 
   Device(this.particleDevice)
       : _connectionStatus = particleDevice.connected
-            ? ConnectionStatus.UNKNOWN
+            ? ConnectionStatus.LOADING
             : ConnectionStatus.OFFLINE;
 
   Future<bool> rename(String newName) {
@@ -249,6 +249,7 @@ class Device {
       // device connected - go ahead with the request
       _doorStatus = DoorStatus.UNKNOWN;
       if (response['connected']) {
+        _connectionStatus = ConnectionStatus.ONLINE;
         return true;
       }
       _doorStatusTime = DateTime.parse(response['last_heard']);
@@ -258,7 +259,7 @@ class Device {
       }
       // device went offline - update status
       _connectionStatus = ConnectionStatus.OFFLINE;
-      throw ('offline');
+      throw('offline');
     });
   }
 
@@ -293,7 +294,7 @@ class Device {
       }
       var numValue = int.tryParse(statusMap['base']);
       if (numValue != null) {
-        status['ambientLight'] = (1 - (numValue / 4095)) * 100;
+        status['ambientLight'] = ((1 - (numValue / 4095)) * 100).round();
       }
       status['reflection'] = int.tryParse(statusMap['sensor']);
       status['wifiSignal'] = int.tryParse(statusMap['signal']);
@@ -326,7 +327,6 @@ class Device {
         return result.reduce((value, element) => value || element);
       });
     });
-    // @todo: load wifi
   }
 
   bool parseConfig(String type, Map<String, dynamic> valueMap) {
@@ -463,7 +463,7 @@ class Device {
         return 'stopped';
       case DoorStatus.UNKNOWN:
       default:
-        return connectionStatusString;
+        return 'loading...';
     }
   }
 
@@ -481,6 +481,7 @@ class Device {
         return 'offline';
       case ConnectionStatus.ERROR:
         return 'error';
+      case ConnectionStatus.LOADING:
       default:
         return 'loading...';
     }
@@ -603,10 +604,28 @@ class Device {
       account,
       data['id'],
       name: data['name'],
+      connected: true,
     );
     final device = Device(particleDevice);
     device.setValue(STKEY_CONFIG, data[STKEY_CONFIG]);
     device.setValue(STKEY_NET, data[STKEY_NET]);
     return device;
+  }
+
+  bool get isUsingNotifications {
+    int value = getValue('alerts/statusAlert');
+    if (value != null && value != 0) {
+      return true;
+    }
+    value = getValue('alerts/timeoutAlert');
+    if (value != null && value != 0) {
+      return true;
+    }
+    value = getValue('alerts/nightAlertFrom');
+    int value2 = getValue('alerts/nightAlertTo');
+    if (value != null && value2 != null && value != value2) {
+      return true;
+    }
+    return false;
   }
 }

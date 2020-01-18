@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class ProviderStatus with ChangeNotifier {
+class ProviderDeviceInfo with ChangeNotifier {
 
   update() {
     notifyListeners();

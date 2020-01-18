@@ -39,7 +39,12 @@ class BottomNavigation extends StatelessWidget {
         ],
         currentIndex: currentIndex,
         onTap: (item) {
-          Navigator.of(context).pushReplacementNamed(ROUTES[item]);
+          if (item == 0) {
+            Navigator.of(context).pop();  
+          }
+          else {
+            Navigator.of(context).pushReplacementNamed(ROUTES[item]);
+          }
         },
       );
   }

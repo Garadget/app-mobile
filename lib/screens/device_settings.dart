@@ -11,7 +11,9 @@ import '../widgets/busy_message.dart';
 import '../widgets/snackbar_message.dart';
 import '../models/device.dart';
 import '../providers/account.dart';
-import '../providers/status.dart';
+import '../providers/device_status.dart';
+import '../providers/device_info.dart';
+import './local_auth.dart';
 
 const List<Map<String, dynamic>> VALUES_SCANPERIOD = [
   {'value': 500, 'text': 'Twice per Second'},
@@ -105,7 +107,8 @@ class _ScreenDeviceSettingsState extends State<ScreenDeviceSettings> {
     } else if (_errorMessage != null) {
       return ErrorScreen(_errorMessage);
     } else {
-      Provider.of<ProviderStatus>(context, listen: true);
+      Provider.of<ProviderDeviceStatus>(context, listen: true);
+      Provider.of<ProviderDeviceInfo>(context, listen: true);
       return Scaffold(
         appBar: AppBar(
           title: Text('Settings'),
@@ -178,8 +181,7 @@ class _ScreenDeviceSettingsState extends State<ScreenDeviceSettings> {
               VALUES_THRESHOLD.map((value) => _percentOption(value)).toList(),
               _percentOption(_device.getValue('config/sensorThreshold') ?? 10),
               (value) {
-                _device.setValue('config/sensorThreshold', value);
-                return _device.saveConfig();
+                return _deviceSaveValue('config/sensorThreshold', value);
               },
             ),
             SettingsSelect(
@@ -191,8 +193,7 @@ class _ScreenDeviceSettingsState extends State<ScreenDeviceSettings> {
                 orElse: () => VALUES_SCANPERIOD[1],
               ),
               (value) {
-                _device.setValue('config/scanInterval', value);
-                return _device.saveConfig();
+                return _deviceSaveValue('config/scanInterval', value);
               },
             ),
             SettingsHeader('OPENER'),
@@ -203,8 +204,7 @@ class _ScreenDeviceSettingsState extends State<ScreenDeviceSettings> {
               _wholeSecondsOption(
                   _device.getValue('config/doorMotionTime') ?? 10000),
               (value) {
-                _device.setValue('config/doorMotionTime', value);
-                return _device.saveConfig();
+                return _deviceSaveValue('config/doorMotionTime', value);
               },
             ),
             SettingsSelect(
@@ -215,8 +215,7 @@ class _ScreenDeviceSettingsState extends State<ScreenDeviceSettings> {
               _fractionalSecondsOption(
                   _device.getValue('config/relayOnTime') ?? 300),
               (value) {
-                _device.setValue('config/relayOnTime', value);
-                return _device.saveConfig();
+                return _deviceSaveValue('config/relayOnTime', value);
               },
             ),
             SettingsSelect(
@@ -227,14 +226,27 @@ class _ScreenDeviceSettingsState extends State<ScreenDeviceSettings> {
               _fractionalSecondsOption(
                   _device.getValue('config/relayOffTime') ?? 1000),
               (value) {
-                _device.setValue('config/relayOffTime', value);
-                return _device.saveConfig();
+                return _deviceSaveValue('config/relayOffTime', value);
               },
             ),
           ],
         ),
       );
     }
+  }
+
+  Future<bool> _deviceSaveValue(String key, dynamic value) {
+    return localAuthChallageDialog(context, AuthLevel.ACTIONS).then((allowed) {
+      if (!allowed) {
+        return false;
+      }
+      _device.setValue(key, value);
+      return _device.saveConfig().then((_) {
+        return _account.storeDevices();
+      }).then((_) {
+        return true;
+      });
+    });
   }
 
   void _copyToClipboard(BuildContext context, String text) {
@@ -244,81 +256,87 @@ class _ScreenDeviceSettingsState extends State<ScreenDeviceSettings> {
   }
 
   void _renameDevice(BuildContext context, Device device) {
-    bool _busy = false;
-    final _controller = TextEditingController();
-    _controller.addListener(() {
-      if (_busy) {
-        return;
+    localAuthChallageDialog(context, AuthLevel.ACTIONS).then((allowed) {
+      if (!allowed) {
+        return false;
       }
-      _busy = true;
-      final re = RegExp(r'[^a-zA-Z0-9\s]');
-      final text = _controller.text.replaceAll(re, '');
-      if (_controller.text == text) {
-        _busy = false;
-        return;
-      }
-      _controller.value = _controller.value.copyWith(
-        text: text,
-        selection: TextSelection(
-          baseOffset: text.length,
-          extentOffset: text.length,
-        ),
-        composing: TextRange.empty,
-      );
-      _busy = false;
-    });
 
-    showDialog(
-        context: context,
-        builder: (ctx) {
-          return AlertDialog(
-            title: Text('Rename Garadget'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                TextField(
-                  autocorrect: true,
-                  autofocus: true,
-                  decoration: InputDecoration(
-                    hintText: device.name,
-                  ),
-                  inputFormatters: [
-                    LengthLimitingTextInputFormatter(31),
-                  ],
-                  controller: _controller,
-                )
+      bool _busy = false;
+      final _controller = TextEditingController();
+      _controller.addListener(() {
+        if (_busy) {
+          return;
+        }
+        _busy = true;
+        final re = RegExp(r'[^a-zA-Z0-9\s]');
+        final text = _controller.text.replaceAll(re, '');
+        if (_controller.text == text) {
+          _busy = false;
+          return;
+        }
+        _controller.value = _controller.value.copyWith(
+          text: text,
+          selection: TextSelection(
+            baseOffset: text.length,
+            extentOffset: text.length,
+          ),
+          composing: TextRange.empty,
+        );
+        _busy = false;
+      });
+
+      return showDialog(
+          context: context,
+          builder: (ctx) {
+            return AlertDialog(
+              title: Text('Rename Garadget'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  TextField(
+                    autocorrect: true,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: device.name,
+                    ),
+                    inputFormatters: [
+                      LengthLimitingTextInputFormatter(31),
+                    ],
+                    controller: _controller,
+                  )
+                ],
+              ),
+              actions: <Widget>[
+                RaisedButton(
+                  child: const Text('Cancel'),
+                  onPressed: () {
+                    Navigator.of(ctx).pop(false);
+                  },
+                ),
+                RaisedButton(
+                  child: const Text('Rename'),
+                  onPressed: () {
+                    String newName = _controller.text;
+                    Navigator.of(ctx).pop(true);
+                    if (newName.length == 0 || newName == device.name) {
+                      return false;
+                    }
+                    showBusyMessage(context, 'Renaming...');
+                    device.rename(newName).whenComplete(() {
+                      Navigator.of(context).pop();
+                    }).then((_) {
+                      print('renamed');
+                    }).catchError((error) {
+                      showSnackbarMessage(context, "Error Renaming Device");
+                      print('error: ${error.toString()}');
+                    });
+                    return true;
+                  },
+                ),
               ],
-            ),
-            actions: <Widget>[
-              RaisedButton(
-                child: const Text('Cancel'),
-                onPressed: () {
-                  Navigator.of(ctx).pop(false);
-                },
-              ),
-              RaisedButton(
-                child: const Text('Rename'),
-                onPressed: () {
-                  String newName = _controller.text;
-                  Navigator.of(ctx).pop(true);
-                  if (newName.length == 0 || newName == device.name) {
-                    return false;
-                  }
-                  showBusyMessage(context, 'Renaming...');
-                  device.rename(newName).whenComplete(() {
-                    Navigator.of(context).pop();
-                  }).then((_) {
-                    print('renamed');
-                  }).catchError((error) {
-                    showSnackbarMessage(context, "Error Renaming Device");
-                    print('error: ${error.toString()}');
-                  });
-                  return true;
-                },
-              ),
-            ],
-          );
-        });
+            );
+          });
+    });
   }
 
   Map<String, dynamic> _percentOption(int value) {

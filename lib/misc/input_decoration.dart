@@ -16,6 +16,7 @@ class InputTheme {
     );
     return InputDecoration(
       contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 15),
+      border: inputNormalBorder,
       enabledBorder: inputNormalBorder,
       focusedBorder: inputNormalBorder,
       errorBorder: inputErrorBorder,

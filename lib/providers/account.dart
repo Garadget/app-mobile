@@ -2,27 +2,50 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/device.dart';
 import '../models/particle.dart' as particle;
-import './status.dart';
+import './device_status.dart';
+import './device_info.dart';
 
 const STKEY_SELECTEDID = 'selectedDeviceId';
 const STKEY_DEVICES = 'devices';
 const STKEY_ACCEMAIL = 'accountEmail';
 const STKEY_AUTHTOKEN = 'authToken';
+const STKEY_AUTHLEVEL = 'authLevel';
+const STKEY_AUTHMETHOD = 'authMethod';
+const STKEY_PINCODE = 'pinCode';
 const URL_PASSWORDRESET = 'https://garadget.com/my/json/password-reset.php';
+const URL_PUSHSUBSCRIBE = 'https://www.garadget.com/my/json/pn-signup.php';
+
+enum AuthLevel {
+  ALWAYS,
+  ACTIONS,
+  NEVER,
+}
+
+enum AuthMethod {
+  PINCODE,
+  TOUCHID,
+  FACEID,
+}
 
 class ProviderAccount with ChangeNotifier {
-  // properties
-  final particle.Account _particleAccount = particle.Account();
-  final ProviderStatus _providerStatus = ProviderStatus();
+  final _particleAccount = particle.Account();
+  final _providerDeviceStatus = ProviderDeviceStatus();
+  final _providerDeviceInfo = ProviderDeviceInfo();
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging();
   List<Device> _devices = [];
   SharedPreferences _storage;
   Timer _refreshTimer;
   String _selectedDeviceId;
+  bool _isUpdatingStatus = false;
+  bool _isUpdatingDevices = false;
+  bool _updateErrors = false;
+  bool _localAuth = true; // request local re-auth
 
   Future<bool> init() async {
     stopTimer();
@@ -47,6 +70,7 @@ class ProviderAccount with ChangeNotifier {
   void stopTimer() {
     if (_refreshTimer != null && _refreshTimer.isActive) {
       _refreshTimer.cancel();
+      _updateErrors = false;
     }
   }
 
@@ -54,7 +78,6 @@ class ProviderAccount with ChangeNotifier {
     if (_refreshTimer != null && _refreshTimer.isActive) {
       return;
     }
-
     _refreshTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       loadStatus();
     });
@@ -97,7 +120,7 @@ class ProviderAccount with ChangeNotifier {
   Future<void> deviceSelectByOrder(deviceOrder) {
     return updateSelection(getDeviceByOrder(deviceOrder).id).then((_) {
       print('device selected: $deviceOrder');
-      return _providerStatus.update();
+      return _providerDeviceStatus.update();
     });
   }
 
@@ -105,6 +128,7 @@ class ProviderAccount with ChangeNotifier {
     return _particleAccount.signup(username, password).then((result) {
       _storage.setString(STKEY_ACCEMAIL, username);
       _storage.setString(STKEY_AUTHTOKEN, _particleAccount.token);
+      _localAuth = false;
       return result;
     });
   }
@@ -113,6 +137,7 @@ class ProviderAccount with ChangeNotifier {
     return _particleAccount.login(username, password).then((result) {
       _storage.setString(STKEY_ACCEMAIL, username);
       _storage.setString(STKEY_AUTHTOKEN, _particleAccount.token);
+      _localAuth = false;
       return result;
     });
   }
@@ -148,19 +173,17 @@ class ProviderAccount with ChangeNotifier {
   }
 
   void clearDeviceCache() {
-    _storage.remove(STKEY_DEVICES);    
+    _storage.remove(STKEY_DEVICES);
   }
 
   Future<bool> loadDevicesCached() async {
-
     // load device list from cache
     stopTimer();
     final devicesCache = _storage.getString(STKEY_DEVICES);
     if (devicesCache == null) {
       print('cache is empty - hard reload');
-      return await loadDevices();
+      return await loadDevices(true);
     }
-
     final devices = json.decode(devicesCache);
     final List<Device> loadedDevices = [];
     devices.forEach((cache) {
@@ -169,24 +192,36 @@ class ProviderAccount with ChangeNotifier {
     _devices = loadedDevices;
     print('loaded: ${_devices.length}');
     await updateSelection(null);
-    startTimer();
+    notifyListeners();
+    requestNotifications();
     return true;
   }
 
-  Future<bool> loadDevices() async {
+  Future<bool> loadDevices(bool timer) async {
     print('reloading...');
+    if (_isUpdatingDevices) {
+      throw ('collision');
+    }
+    _isUpdatingDevices = true;
     stopTimer();
 
     // get device list from Particle
-    List<particle.Device> devices = await _particleAccount.getDevices();
-    print('list loaded: ${devices.length}');
-    if (devices.length > 0) {
-      _devices =
-          devices.map((particleDevice) => Device(particleDevice)).toList();
-      loadConfig(); // no await
+    try {
+      List<particle.Device> devices = await _particleAccount.getDevices();
+      print('list loaded: ${devices.length}');
+      if (devices.length > 0) {
+        _devices =
+            devices.map((particleDevice) => Device(particleDevice)).toList();
+        loadConfig(); // no await
+      }
+      await updateSelection(null);
+      notifyListeners();
+    } finally {
+      _isUpdatingDevices = false;
     }
-    await updateSelection(null);
-    startTimer();
+    if (timer) {
+      startTimer();
+    }
     return true;
   }
 
@@ -196,22 +231,40 @@ class ProviderAccount with ChangeNotifier {
     return _storage.setString(STKEY_DEVICES, devicesData);
   }
 
-  Future<void> loadStatus() {
-    print('.');
-    return Future.wait(
-      _devices.map((device) {
-        return device.loadStatus().then((statusUpdated) {
-          if (statusUpdated) {
-            notifyListeners();
+  Future<void> loadStatus() async {
+    if (_isUpdatingStatus) {
+      return;
+    }
+    _isUpdatingStatus = true;
+    bool stausUpdated = false;
+    bool updateErrors = false;
+    try {
+      await Future.wait(
+        _devices.map((device) async {
+          try {
+            final deviceStatusUpdated = await device.loadStatus();
+            if (deviceStatusUpdated) {
+              stausUpdated = true;
+            }
+          } catch (error) {
+            if (error.toString() != 'timeout' && error.toString() != 'offline') {
+              // flag account level request errors
+              updateErrors = true;
+            }
+            stausUpdated = true;
           }
-        }).catchError((error) {
-          notifyListeners();
-          print('error: ${error.toString()}');
-        }).whenComplete(() {
-          _providerStatus.update();
-        });
-      }).toList(),
-    );
+        }).toList(),
+      );
+    } finally {
+      if (stausUpdated || updateErrors != _updateErrors) {
+        _updateErrors = updateErrors;
+        providerDeviceStatus.update();
+      }
+      else {
+        _providerDeviceInfo.update();
+      }
+      _isUpdatingStatus = false;
+    }
   }
 
   Future<bool> loadConfig() {
@@ -222,20 +275,21 @@ class ProviderAccount with ChangeNotifier {
         print('device: ${device.id} error: ${error.toString()}');
         return true;
       }).whenComplete(() {
-        notifyListeners();
+        _providerDeviceStatus.update();
       }),
     )).then((results) {
       return results.reduce((value, element) => value || element);
     }).whenComplete(() {
       print('stored devices');
       storeDevices();
+      requestNotifications();
     });
   }
 
   getDeviceById(String id) {
     return devices.firstWhere((device) {
       return device.id == id;
-    });
+    }, orElse: () => null);
   }
 
   getDeviceByOrder(int order) {
@@ -252,13 +306,58 @@ class ProviderAccount with ChangeNotifier {
   deviceCommand(String deviceId, DoorCommands command) {
     final device = getDeviceById(_selectedDeviceId);
     final commandString = device.commandLocal(command);
-    notifyListeners();
+    _providerDeviceStatus.update();
     if (commandString != null) {
       device.commandRemote(commandString).then((result) {
         // @todo: handle command failures (SnackBar widget?)
-        notifyListeners();
+        _providerDeviceStatus.update();
       });
     }
+  }
+
+  bool get isUsingNotifications {
+    return _devices.fold(false, (value, element) => value || element.isUsingNotifications);
+  }
+
+  Future<bool> requestNotifications() async {
+
+    bool allowed = await _firebaseMessaging.requestNotificationPermissions();
+    final token = await _firebaseMessaging.getToken();
+
+    final Map postData = {
+      'platform': 'fcm',
+      'subscriber': token,
+      'user': accountEmail,
+      'authtoken': _particleAccount.token
+    };
+    if (!isUsingNotifications || (allowed != null && !allowed)) {
+      postData['action'] = 'remove';
+      print('notifications not used');
+      return true;
+    }
+    else {
+      postData['action'] = 'add';
+      postData['device'] = _devices.map((device) => device.id).join(',');
+    }
+    print('data: ${postData.toString()}');
+
+    try {
+      await http.post(
+        URL_PUSHSUBSCRIBE,
+        headers: null,
+        body: postData,
+      ).then((response) {
+        print('response: ${response.body}');
+        final responseMap = json.decode(response.body);
+        if (responseMap['error'] != null) {
+          throw (responseMap['error']);
+        }
+      });
+    }
+    catch(error) {
+      print('Error: ${error.toString()}');
+    }
+    return true;
   }
 
   static String wifiSignalToString(int wifiSignal) {
@@ -291,12 +390,20 @@ class ProviderAccount with ChangeNotifier {
     }
   }
 
-  get providerStatus {
-    return _providerStatus;
+  get providerDeviceStatus {
+    return _providerDeviceStatus;
+  }
+
+  get providerDeviceInfo {
+    return _providerDeviceInfo;
   }
 
   String get selectedDeviceId {
     return _selectedDeviceId;
+  }
+
+  bool get updateErrors {
+    return _updateErrors;
   }
 
   int get selectedDeviceOrder {
@@ -313,6 +420,93 @@ class ProviderAccount with ChangeNotifier {
 
   String get accountEmail {
     return _storage.getString(STKEY_ACCEMAIL);
+  }
+
+  AuthLevel get authLevel {
+    final value = _storage.getString(STKEY_AUTHLEVEL);
+    switch (value) {
+      case 'always':
+        return AuthLevel.ALWAYS;
+      case 'actions':
+        return AuthLevel.ACTIONS;
+      case 'never':
+      default:
+        return AuthLevel.NEVER;
+    }
+  }
+
+  Future<bool> setAuthLevel(AuthLevel value) {
+    String stringValue;
+    switch (value) {
+      case AuthLevel.ALWAYS:
+        stringValue = 'always';
+        break;
+      case AuthLevel.ACTIONS:
+        stringValue = 'actions';
+        break;
+      case AuthLevel.NEVER:
+      default:
+        return _storage.remove(STKEY_AUTHLEVEL);
+    }
+    return _storage.setString(STKEY_AUTHLEVEL, stringValue);
+  }
+
+  void requireLocalAuth() {
+    _localAuth = true;
+  }
+
+  void fulfillLocalAuth() {
+    _localAuth = false;
+  }
+
+  AuthMethod isLocalAuthNeeded(AuthLevel level) {
+    if (_localAuth && (authLevel == AuthLevel.ALWAYS || authLevel == level)) {
+      return authMethod;
+    }
+    return null;
+  }
+
+  AuthMethod get authMethod {
+    final value = _storage.getString(STKEY_AUTHMETHOD);
+    switch (value) {
+      case 'pincode':
+        return AuthMethod.PINCODE;
+      case 'faceid':
+        return AuthMethod.FACEID;
+      case 'touchid':
+        return AuthMethod.TOUCHID;
+      default:
+        return null;
+    }
+  }
+
+  Future<bool> setAuthMethod(AuthMethod value) {
+    String stringValue;
+    switch (value) {
+      case AuthMethod.PINCODE:
+        stringValue = 'pincode';
+        break;
+      case AuthMethod.FACEID:
+        stringValue = 'faceid';
+        break;
+      case AuthMethod.TOUCHID:
+        stringValue = 'touchid';
+        break;
+      default:
+        return _storage.remove(STKEY_AUTHMETHOD);
+    }
+    return _storage.setString(STKEY_AUTHMETHOD, stringValue);
+  }
+
+  Future<bool> setPinCode(String value) {
+    if (value == null || value.isEmpty) {
+      return _storage.remove(STKEY_PINCODE);
+    }
+    return _storage.setString(STKEY_PINCODE, value);
+  }
+
+  bool isPinCodeCorrect(String value) {
+    return value == _storage.getString(STKEY_PINCODE);
   }
 
   List<Device> get devices {

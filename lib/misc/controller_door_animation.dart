@@ -5,7 +5,7 @@ import 'package:flare_flutter/flare_controller.dart';
 
 import '../models/device.dart';
 
-typedef void OnProgress();
+typedef void OnProgress(int);
 
 class DoorAnimationController extends FlareController {
 
@@ -130,7 +130,7 @@ class DoorAnimationController extends FlareController {
 
     if (newProgress != _progress || newAnimate != _animate) {
       if (_onProgress != null) {
-        _onProgress();
+        _onProgress(newProgress);
       }
       _progress = newProgress;
       _animate = newAnimate;
@@ -140,10 +140,6 @@ class DoorAnimationController extends FlareController {
 
   bool get showProgress {
     return _animate;
-  }
-
-  int get progressValue {
-    return _progress;
   }
 
   @override

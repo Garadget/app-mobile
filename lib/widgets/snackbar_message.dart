@@ -8,12 +8,19 @@ void showSnackbarMessage(
   Scaffold.of(context).showSnackBar(
     SnackBar(
       content: Row(
+        mainAxisSize: MainAxisSize.max,
         children: <Widget>[
           Icon(icon ?? Icons.error),
           SizedBox(
             width: 5,
           ),
-          Text(message),
+          Expanded(
+            child: Text(
+              message,
+              softWrap: true,
+              maxLines: 5,
+            ),
+          ),
         ],
       ),
     ),

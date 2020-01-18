@@ -6,6 +6,9 @@ import '../misc/controller_door_animation.dart';
 
 import '../models/device.dart';
 import '../providers/account.dart';
+import '../providers/device_status.dart';
+import '../screens/local_auth.dart';
+
 
 class WidgetDeviceCarouselItem extends StatefulWidget {
   final Device device;
@@ -31,7 +34,8 @@ class _WidgetDeviceCarouselItemState extends State<WidgetDeviceCarouselItem> {
 
   @override
   Widget build(BuildContext context) {
-    _account = Provider.of<ProviderAccount>(context, listen: true);
+    _account = Provider.of<ProviderAccount>(context, listen: false);
+    Provider.of<ProviderDeviceStatus>(context, listen: true);
     animationController.start();
 
     return GestureDetector(
@@ -111,6 +115,7 @@ class _WidgetDeviceCarouselItemState extends State<WidgetDeviceCarouselItem> {
   }
 
   void _tapCommand() {
+    print('tap');
     // @todo: denied buzzer sound?
     if (widget.device.connectionStatus != ConnectionStatus.ONLINE) {
       return null;
@@ -132,7 +137,7 @@ class _WidgetDeviceCarouselItemState extends State<WidgetDeviceCarouselItem> {
       default:
         return null;
     }
-    _account.deviceCommand(widget.device.id, command);
+    _deviceCommand(widget.device.id, command);
   }
 
   void _handleSwipeStart(DragStartDetails swipeDetails) {
@@ -153,15 +158,24 @@ class _WidgetDeviceCarouselItemState extends State<WidgetDeviceCarouselItem> {
       return;
     }
     if (dy > 0) {
-      _account.deviceCommand(widget.device.id, DoorCommands.CLOSE);
+      _deviceCommand(widget.device.id, DoorCommands.CLOSE);
     }
     else if (dy < 0) {
-      _account.deviceCommand(widget.device.id, DoorCommands.OPEN);
+     _deviceCommand(widget.device.id, DoorCommands.OPEN);
     }
   }
 
   void _handleSwipeUpdate(DragUpdateDetails swipeDetails) {
     _updateVerticalDragDetails = swipeDetails;
+  }
+
+  void _deviceCommand(String deviceId, DoorCommands command) {
+    localAuthChallageDialog(context, AuthLevel.ACTIONS).then((allowed) {
+      if (!allowed) {
+        return;
+      }
+      _account.deviceCommand(deviceId, command);
+    });
   }
 }
 
@@ -175,10 +189,15 @@ class WidgetProgressText extends StatefulWidget {
 }
 
 class _WidgetProgressTextState extends State<WidgetProgressText> {
+
+  int progress = 0;
+
   @override
   void initState() {
-    widget.animationController.onProgress = () {
-      setState(() {});
+    widget.animationController.onProgress = (newProgress) {
+      setState(() {
+        progress = newProgress;
+      });
     };
     super.initState();
   }
@@ -193,7 +212,7 @@ class _WidgetProgressTextState extends State<WidgetProgressText> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: <Widget>[
           Text(
-            widget.animationController.progressValue.toString(),
+            progress.toString(),
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.bold,
@@ -214,8 +233,9 @@ class _WidgetProgressTextState extends State<WidgetProgressText> {
   }
 
   @override
-  void deactivate() {
+  void dispose() {
     widget.animationController.onProgress = null;
-    super.deactivate();
+    super.dispose();
   }
+
 }

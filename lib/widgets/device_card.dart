@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 
 import '../models/device.dart';
 import '../providers/account.dart';
-import '../providers/status.dart';
+import '../providers/device_status.dart';
+import '../providers/device_info.dart';
 import '../screens/device_settings.dart';
 
 const STRING_PLACEHOLDER = '...';
@@ -12,7 +13,8 @@ class WidgetDeviceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final account = Provider.of<ProviderAccount>(context, listen: false);
-    Provider.of<ProviderStatus>(context, listen: true);
+    Provider.of<ProviderDeviceStatus>(context, listen: true);
+    Provider.of<ProviderDeviceInfo>(context, listen: true);
     final device = account.selectedDevice;
 
     final List<Widget> cards = [
@@ -27,7 +29,7 @@ class WidgetDeviceCard extends StatelessWidget {
         WidgetCardTile(
           icon: Icons.brightness_5,
           title: 'Reflection: ${device.getValue('status/reflection') ?? STRING_PLACEHOLDER}%',
-          subtitle: 'Ambient Light: ${device.getValue('status/ambientLight' ?? STRING_PLACEHOLDER)}%',
+          subtitle: 'Ambient Light: ${device.getValue('status/ambientLight') ?? STRING_PLACEHOLDER}%',
         ),
       );
       final int wifiSignal = device.getValue('status/wifiSignal');
@@ -46,7 +48,7 @@ class WidgetDeviceCard extends StatelessWidget {
         title: 'Alerts & Settings',
         subtitle: 'Configure your Garadget',
         tapHandler: () {
-          Navigator.of(context).pushReplacementNamed(
+          Navigator.of(context).pushNamed(
             ScreenDeviceSettings.routeName,
             arguments: device,
           );

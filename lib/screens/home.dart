@@ -10,6 +10,7 @@ import '../widgets/network_error.dart';
 import './device_add_intro.dart';
 import './account_signin.dart';
 import './account_signup.dart';
+import './local_auth.dart';
 
 const URL_COMMUNITY_BOARD = 'https://status.particle.io';
 
@@ -20,11 +21,24 @@ class ScreenHome extends StatefulWidget {
   _ScreenHomeState createState() => _ScreenHomeState();
 }
 
-class _ScreenHomeState extends State<ScreenHome> {
+class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
   ProviderAccount _account;
   bool _isLoading = false;
   bool _isFirstRun = true;
   String _errorMessage;
+
+  @override
+  void initState() {
+    WidgetsBinding.instance.addObserver(this);
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _account.stopTimer();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   @override
   void setState(function) {
@@ -38,14 +52,30 @@ class _ScreenHomeState extends State<ScreenHome> {
     if (_isFirstRun) {
       _isFirstRun = false;
       _account = Provider.of<ProviderAccount>(context, listen: true);
-      _networkRequest(_account.init);
+      _networkRequest(() => _account.init()).then((_) {
+        return localAuthChallageDialog(context, AuthLevel.ALWAYS);
+      }).then((allowed) {
+        if (allowed) {
+          _account.startTimer();
+        }
+      });
+    } else if (_account.updateErrors) {
+      _account.clearDeviceCache();
+      _networkRequest(() => _account.loadDevices(true));
     }
     super.didChangeDependencies();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _account.requireLocalAuth();
+    if (state == AppLifecycleState.resumed) {
+      localAuthChallageDialog(context, AuthLevel.ALWAYS);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    print('render');
     Widget body;
     if (_isLoading && _errorMessage == null) {
       return BusyScreen('Loading...');
@@ -69,7 +99,7 @@ class _ScreenHomeState extends State<ScreenHome> {
               semanticLabel: 'Refresh List',
             ),
             onPressed: () {
-              _networkRequest(_account.loadDevices);
+              _networkRequest(() => _account.loadDevices(true));
             },
           ),
           IconButton(
@@ -79,14 +109,15 @@ class _ScreenHomeState extends State<ScreenHome> {
             ),
             onPressed: () {
               _account.stopTimer();
-              Navigator.of(context).pushNamed(
+              Navigator.of(context)
+                  .pushNamed(
                 ScreenDeviceAddIntro.routeName,
                 arguments: null,
-              ).then((result) {
+              )
+                  .then((result) {
                 if (result != null) {
-                  _networkRequest(_account.loadDevices);
-                }
-                else {
+                  _networkRequest(() => _account.loadDevices(true));
+                } else {
                   _account.startTimer();
                 }
               });
@@ -131,7 +162,7 @@ class _ScreenHomeState extends State<ScreenHome> {
     );
   }
 
-  void _networkRequest(Future<bool> request()) async {
+  Future<void> _networkRequest(Future<bool> request()) async {
     if (_isLoading) {
       return;
     }
@@ -177,4 +208,5 @@ class _ScreenHomeState extends State<ScreenHome> {
       return;
     }
   }
+
 }
