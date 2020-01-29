@@ -99,7 +99,7 @@ class DoorAnimationController extends FlareController {
       _animation.time = 0.0;
     }
     else {
-      _timeRatio = _animation.duration * 1000 / _device.getValue('config/doorMotionTime');
+      _timeRatio = _animation.duration * 1000 / (_device.getValue('config/doorMotionTime') ?? 10000);
       _animation.time = _device.doorStatusTime * _timeRatio;
     }
     _animate = true;

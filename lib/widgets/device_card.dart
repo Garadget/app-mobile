@@ -16,6 +16,9 @@ class WidgetDeviceCard extends StatelessWidget {
     Provider.of<ProviderDeviceStatus>(context, listen: true);
     Provider.of<ProviderDeviceInfo>(context, listen: true);
     final device = account.selectedDevice;
+    if (device == null) {
+      return SizedBox.shrink();
+    }
 
     final List<Widget> cards = [
       WidgetCardTile(

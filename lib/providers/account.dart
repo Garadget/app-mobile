@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:isolate';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+//import 'package:geofencing/geofencing.dart';
 
 import '../models/device.dart';
 import '../models/particle.dart' as particle;
@@ -13,6 +16,7 @@ import './device_info.dart';
 
 const STKEY_SELECTEDID = 'selectedDeviceId';
 const STKEY_DEVICES = 'devices';
+const STKEY_LOCATION = 'location';
 const STKEY_ACCEMAIL = 'accountEmail';
 const STKEY_AUTHTOKEN = 'authToken';
 const STKEY_AUTHLEVEL = 'authLevel';
@@ -43,13 +47,13 @@ class ProviderAccount with ChangeNotifier {
   Timer _refreshTimer;
   String _selectedDeviceId;
   bool _isUpdatingStatus = false;
-  bool _isUpdatingDevices = false;
+  bool _isUpdatingDevices = true;
   bool _updateErrors = false;
   bool _localAuth = true; // request local re-auth
 
   Future<bool> init() async {
-    stopTimer();
     await initStorage();
+
     String authToken = _storage.getString(STKEY_AUTHTOKEN);
     if (authToken == null) {
       return false;
@@ -57,6 +61,68 @@ class ProviderAccount with ChangeNotifier {
     _particleAccount.token = authToken;
     return loadDevicesCached();
   }
+
+  void _initMessaging() {
+    _firebaseMessaging.configure(
+      onMessage: (Map<String, dynamic> message) async {
+        print("onMessage: $message");
+      },
+      onResume: (Map<String, dynamic> message) async {
+        final deviceId = message['data']['device'];
+        await updateSelection(deviceId);
+        return notifyListeners();
+      },
+    );
+  }
+
+  Future<void> _initGeofence() async {
+    if (!isUsingLocation) {
+      return;
+    }
+    print('Initializing...');
+
+    // String geofenceState = 'N/A';
+    // double latitude = 39.1096355;
+    // double longitude = -108.6033691;
+    // double radius = 50.0;
+    // ReceivePort port = ReceivePort();
+
+    // final List<GeofenceEvent> triggers = <GeofenceEvent>[
+    //   GeofenceEvent.enter,
+    //   GeofenceEvent.dwell,
+    //   GeofenceEvent.exit
+    // ];
+    // final AndroidGeofencingSettings androidSettings = AndroidGeofencingSettings(
+    //     initialTrigger: <GeofenceEvent>[
+    //       GeofenceEvent.enter,
+    //       GeofenceEvent.exit,
+    //       GeofenceEvent.dwell
+    //     ],
+    //     loiteringDelay: 1000 * 60);
+
+    // IsolateNameServer.registerPortWithName(
+    //     port.sendPort, 'geofencing_send_port');
+    // port.listen((dynamic data) {
+    //   print('Event: $data');
+    //   // setState(() {
+    //   //   geofenceState = data;
+    //   // });
+    // });
+    // await GeofencingManager.initialize();
+
+    // await GeofencingManager.registerGeofence(
+    //     GeofenceRegion('mtv', latitude, longitude, radius, triggers,
+    //         androidSettings: androidSettings),
+    //     callback);
+    // print('Geo ready.');
+  }
+
+  // static void callback(List<String> ids, Location l, GeofenceEvent e) async {
+  //   print('Fences: $ids Location $l Event: $e');
+  //   final SendPort send =
+  //       IsolateNameServer.lookupPortByName('geofencing_send_port');
+  //   send?.send(e.toString());
+  // }
 
   Future<void> initStorage() {
     if (_storage != null) {
@@ -68,6 +134,7 @@ class ProviderAccount with ChangeNotifier {
   }
 
   void stopTimer() {
+    print('stopping timer');
     if (_refreshTimer != null && _refreshTimer.isActive) {
       _refreshTimer.cancel();
       _updateErrors = false;
@@ -75,6 +142,7 @@ class ProviderAccount with ChangeNotifier {
   }
 
   void startTimer() {
+    print('starting timer');
     if (_refreshTimer != null && _refreshTimer.isActive) {
       return;
     }
@@ -118,8 +186,11 @@ class ProviderAccount with ChangeNotifier {
 
   //Device activeDevice = null;
   Future<void> deviceSelectByOrder(deviceOrder) {
-    return updateSelection(getDeviceByOrder(deviceOrder).id).then((_) {
-      print('device selected: $deviceOrder');
+    final selectedDeviceId = getDeviceByOrder(deviceOrder).id;
+    if (selectedDeviceId == _selectedDeviceId) {
+      return Future.value();
+    }
+    return updateSelection(selectedDeviceId).then((_) {
       return _providerDeviceStatus.update();
     });
   }
@@ -143,10 +214,9 @@ class ProviderAccount with ChangeNotifier {
   }
 
   Future<bool> logout() {
-    stopTimer();
     return _particleAccount.logout().then((result) {
       _storage.remove(STKEY_SELECTEDID);
-      _storage.remove(STKEY_DEVICES);
+      clearDeviceCache();
       _storage.remove(STKEY_AUTHTOKEN);
       return result;
     });
@@ -178,11 +248,11 @@ class ProviderAccount with ChangeNotifier {
 
   Future<bool> loadDevicesCached() async {
     // load device list from cache
-    stopTimer();
+    _isUpdatingDevices = true;
     final devicesCache = _storage.getString(STKEY_DEVICES);
     if (devicesCache == null) {
       print('cache is empty - hard reload');
-      return await loadDevices(true);
+      return await loadDevices();
     }
     final devices = json.decode(devicesCache);
     final List<Device> loadedDevices = [];
@@ -190,45 +260,71 @@ class ProviderAccount with ChangeNotifier {
       loadedDevices.add(Device.rehydrate(_particleAccount, cache));
     });
     _devices = loadedDevices;
-    print('loaded: ${_devices.length}');
-    await updateSelection(null);
-    notifyListeners();
-    requestNotifications();
+    await _onDevicesLoaded();
+    await _onAccountLoaded();
     return true;
   }
 
-  Future<bool> loadDevices(bool timer) async {
-    print('reloading...');
-    if (_isUpdatingDevices) {
-      throw ('collision');
-    }
+  Future<bool> loadDevices() async {
     _isUpdatingDevices = true;
-    stopTimer();
 
     // get device list from Particle
     try {
       List<particle.Device> devices = await _particleAccount.getDevices();
-      print('list loaded: ${devices.length}');
       if (devices.length > 0) {
         _devices =
             devices.map((particleDevice) => Device(particleDevice)).toList();
-        loadConfig(); // no await
+        loadConfig().then((_) {
+          _onAccountLoaded();
+        }); // no await
       }
-      await updateSelection(null);
-      notifyListeners();
     } finally {
-      _isUpdatingDevices = false;
-    }
-    if (timer) {
-      startTimer();
+      await _onDevicesLoaded();
     }
     return true;
   }
 
-  Future<void> storeDevices() {
+  void _appendLocationData() {
+    final config = _storage.getString(STKEY_LOCATION);
+    if (config == null) {
+      return;
+    }
+    final Map<String, dynamic> locationData = json.decode(config);
+    _devices.forEach((device){
+      if (locationData[device.id] != null) {
+        device.locationData = locationData[device.id];
+      }
+    });
+  }
+
+  Future<void> _onDevicesLoaded() async {
+    print('devices loaded: ${_devices.length}');
+    _appendLocationData();
+    await updateSelection(null);
+    _isUpdatingDevices = false;
+    notifyListeners();
+  }
+
+  Future<void> _onAccountLoaded() async {
+    print('account loaded');
+    subscribeToNotifications();
+    _initMessaging();
+    _initGeofence();
+  }
+
+  Future<void> storeDevices() async {
     final devicesData =
         json.encode(_devices.map((device) => device.persistentData).toList());
-    return _storage.setString(STKEY_DEVICES, devicesData);
+    await _storage.setString(STKEY_DEVICES, devicesData);
+    final Map<String, dynamic> locationData = {};
+    _devices.forEach((device) {
+      final deviceLocation = device.locationData;
+      if (deviceLocation != null && deviceLocation['enabled']) {
+        locationData[device.id] = deviceLocation;
+      }
+    });
+    await _storage.setString(STKEY_LOCATION, json.encode(locationData));
+//    print('stored devices');
   }
 
   Future<void> loadStatus() async {
@@ -247,7 +343,8 @@ class ProviderAccount with ChangeNotifier {
               stausUpdated = true;
             }
           } catch (error) {
-            if (error.toString() != 'timeout' && error.toString() != 'offline') {
+            if (error.toString() != 'timeout' &&
+                error.toString() != 'offline') {
               // flag account level request errors
               updateErrors = true;
             }
@@ -256,11 +353,12 @@ class ProviderAccount with ChangeNotifier {
         }).toList(),
       );
     } finally {
-      if (stausUpdated || updateErrors != _updateErrors) {
+      if (updateErrors != _updateErrors) {
         _updateErrors = updateErrors;
-        providerDeviceStatus.update();
-      }
-      else {
+        notifyListeners();
+      } else if (stausUpdated) {
+        _providerDeviceStatus.update();
+      } else {
         _providerDeviceInfo.update();
       }
       _isUpdatingStatus = false;
@@ -280,19 +378,18 @@ class ProviderAccount with ChangeNotifier {
     )).then((results) {
       return results.reduce((value, element) => value || element);
     }).whenComplete(() {
-      print('stored devices');
       storeDevices();
-      requestNotifications();
+      subscribeToNotifications();
     });
   }
 
-  getDeviceById(String id) {
+  Device getDeviceById(String id) {
     return devices.firstWhere((device) {
       return device.id == id;
     }, orElse: () => null);
   }
 
-  getDeviceByOrder(int order) {
+  Device getDeviceByOrder(int order) {
     return devices[order];
   }
 
@@ -303,58 +400,71 @@ class ProviderAccount with ChangeNotifier {
     return appDevice;
   }
 
-  deviceCommand(String deviceId, DoorCommands command) {
+  void deviceCommand(String deviceId, DoorCommands command) {
     final device = getDeviceById(_selectedDeviceId);
+    if (device.connectionStatus != ConnectionStatus.ONLINE) {
+      return null;
+    }
+
     final commandString = device.commandLocal(command);
     _providerDeviceStatus.update();
     if (commandString != null) {
       device.commandRemote(commandString).then((result) {
-        // @todo: handle command failures (SnackBar widget?)
+        // TODO: handle command failures (SnackBar message or sound?)
         _providerDeviceStatus.update();
       });
     }
   }
 
   bool get isUsingNotifications {
-    return _devices.fold(false, (value, element) => value || element.isUsingNotifications);
+    return _devices.fold(
+        false, (value, device) => value || device.isUsingNotifications);
   }
 
-  Future<bool> requestNotifications() async {
+  bool get isUsingLocation {
+    return _devices.fold(
+      false, (value, device) => value || device.isUsingLocation);
+  }
 
+  Future<bool> subscribeToNotifications() async {
     bool allowed = await _firebaseMessaging.requestNotificationPermissions();
-    final token = await _firebaseMessaging.getToken();
+    if (allowed != null && !allowed) {
+      print('notification not ready');
+      return Future.value(false);
+    }
 
+    final token = await _firebaseMessaging.getToken();
     final Map postData = {
       'platform': 'fcm',
       'subscriber': token,
       'user': accountEmail,
       'authtoken': _particleAccount.token
     };
-    if (!isUsingNotifications || (allowed != null && !allowed)) {
+    if (!isUsingNotifications) {
       postData['action'] = 'remove';
       print('notifications not used');
       return true;
-    }
-    else {
+    } else {
       postData['action'] = 'add';
       postData['device'] = _devices.map((device) => device.id).join(',');
     }
-    print('data: ${postData.toString()}');
+    // print('data: ${postData.toString()}');
 
     try {
-      await http.post(
+      await http
+          .post(
         URL_PUSHSUBSCRIBE,
         headers: null,
         body: postData,
-      ).then((response) {
-        print('response: ${response.body}');
+      )
+          .then((response) {
+//        print('response: ${response.body}');
         final responseMap = json.decode(response.body);
         if (responseMap['error'] != null) {
           throw (responseMap['error']);
         }
       });
-    }
-    catch(error) {
+    } catch (error) {
       print('Error: ${error.toString()}');
     }
     return true;
@@ -404,6 +514,10 @@ class ProviderAccount with ChangeNotifier {
 
   bool get updateErrors {
     return _updateErrors;
+  }
+
+  bool get isUpdatingDevices {
+    return _isUpdatingDevices;
   }
 
   int get selectedDeviceOrder {
@@ -510,7 +624,7 @@ class ProviderAccount with ChangeNotifier {
   }
 
   List<Device> get devices {
-    // @todo: sort by sort order
+    // TODO: implement custom sort order
     return [..._devices];
   }
 }

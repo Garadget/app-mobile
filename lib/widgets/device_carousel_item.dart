@@ -115,12 +115,6 @@ class _WidgetDeviceCarouselItemState extends State<WidgetDeviceCarouselItem> {
   }
 
   void _tapCommand() {
-    print('tap');
-    // @todo: denied buzzer sound?
-    if (widget.device.connectionStatus != ConnectionStatus.ONLINE) {
-      return null;
-    }
-
     DoorCommands command;
     switch (widget.device.doorStatus) {
       case DoorStatus.STOPPED:

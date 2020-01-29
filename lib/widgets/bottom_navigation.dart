@@ -9,8 +9,8 @@ class BottomNavigation extends StatelessWidget {
   final int currentIndex;
   static const ROUTES = [
     ScreenHome.routeName,
-    ScreenDeviceAlerts.routeName,
     ScreenDeviceSettings.routeName,
+    ScreenDeviceAlerts.routeName,
   ];
 
   BottomNavigation(this.currentIndex);
@@ -25,12 +25,12 @@ class BottomNavigation extends StatelessWidget {
             title: Text('Home'),
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.notifications),
-            title: Text('Alerts'),
-          ),
-          BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             title: Text('Settings'),
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.notifications),
+            title: Text('Alerts'),
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.delete),

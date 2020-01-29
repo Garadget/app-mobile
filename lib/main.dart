@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-// @todo:  use intl for internatialization
+// TODO: use intl for localization
 import './providers/account.dart';
 import './providers/device_status.dart';
 import './providers/device_info.dart';

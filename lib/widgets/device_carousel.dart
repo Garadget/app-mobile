@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:carousel_slider/carousel_slider.dart';
+//import 'package:carousel_slider/carousel_slider.dart';
 
 import './device_carousel_item.dart';
 import '../providers/account.dart';
@@ -18,18 +18,21 @@ class WidgetDeviceCarousel extends StatelessWidget {
       );
     }
 
-    return CarouselSlider(
-        enableInfiniteScroll: false,
-        initialPage: account.selectedDeviceOrder,
-        aspectRatio: 1.4,
-        onPageChanged: account.deviceSelectByOrder,
-        viewportFraction: 0.7,
-        enlargeCenterPage: true,
-        autoPlay: false,
-        items: account.devices.map((device) {
+    final controller = PageController(
+      viewportFraction: 0.7,
+    );
+    Future.delayed(Duration.zero, () {
+      controller.jumpToPage(account.selectedDeviceOrder);
+    });
+
+    return PageView(
+      controller: controller,
+      children: account.devices.map((device) {
           return WidgetDeviceCarouselItem(
             device,
           );
-        }).toList());
+        }).toList(),
+        onPageChanged: account.deviceSelectByOrder,
+    );
   }
 }

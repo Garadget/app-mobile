@@ -1,4 +1,4 @@
-package com.garadget.garadget
+package com.garadget.android
 
 import android.os.Bundle
 

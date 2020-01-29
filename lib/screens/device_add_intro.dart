@@ -39,7 +39,6 @@ class _ScreenDeviceAddIntroState extends State<ScreenDeviceAddIntro> {
     if (_isFirstRun && _claimCode == null) {
       _isFirstRun = false;
       _account = Provider.of<ProviderAccount>(context, listen: false);
-      _account.stopTimer();
       await _account.initStorage();
 
       if (_isLoading) {

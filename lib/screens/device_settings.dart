@@ -15,6 +15,8 @@ import '../providers/device_status.dart';
 import '../providers/device_info.dart';
 import './local_auth.dart';
 
+const LINK_HELP = 'https://www.garadget.com/help-settings';
+
 const List<Map<String, dynamic>> VALUES_SCANPERIOD = [
   {'value': 500, 'text': 'Twice per Second'},
   {'value': 1000, 'text': 'Every Second'},
@@ -109,127 +111,157 @@ class _ScreenDeviceSettingsState extends State<ScreenDeviceSettings> {
     } else {
       Provider.of<ProviderDeviceStatus>(context, listen: true);
       Provider.of<ProviderDeviceInfo>(context, listen: true);
+
+      bool deviceOnline = _device.connectionStatus == ConnectionStatus.ONLINE;
+      List<Widget> settingsItems = [
+        SettingsHeader('DEVICE',
+              helpLink: LINK_HELP + '-device',
+            ),
+        SettingsItem(
+          'ID',
+          value: _device.id,
+          icon: Icons.content_copy,
+          action: (ctx) {
+            _copyToClipboard(ctx, _device.id);
+          },
+        ),
+        SettingsItem(
+          'Name',
+          value: _device.name,
+          icon: deviceOnline ? Icons.edit : null,
+          action: deviceOnline
+              ? (ctx) {
+                  _renameDevice(ctx, _device);
+                }
+              : null,
+        ),
+        SettingsItem(
+          'System',
+          value: _device.getValue('config/systemVersion'),
+        ),
+      ];
+      if (deviceOnline) {
+        settingsItems = settingsItems +
+            [
+              SettingsItem(
+                'Firmware',
+                value: _device.getValue('config/firmwareVersion'),
+              ),
+              SettingsHeader('NETWORK',
+              helpLink: LINK_HELP + '-network',
+            ),
+              SettingsItem(
+                'WiFi SSID',
+                value: _device.getValue('net/ssid'),
+              ),
+              SettingsItem(
+                'Signal Quality',
+                value: ProviderAccount.wifiSignalToString(
+                  _device.getValue('status/wifiSignal') as int,
+                ),
+              ),
+              SettingsItem(
+                'IP',
+                value: _device.getValue('net/ip'),
+              ),
+              SettingsItem(
+                'Gateway',
+                value: _device.getValue('net/gateway'),
+              ),
+              SettingsItem(
+                'Mask',
+                value: _device.getValue('net/subnet'),
+              ),
+              SettingsItem(
+                'MAC',
+                value: _device.getValue('net/mac'),
+              ),
+              SettingsHeader('SENSOR',
+              helpLink: LINK_HELP + '-sensor',
+            ),
+              SettingsItem(
+                'Status',
+                value:
+                    '${_device.doorStatusString} ${_device.doorStatusTimeString}',
+              ),
+              SettingsItem(
+                'Reflection',
+                value: _device.getValue('status/reflection').toString() + '%',
+              ),
+              SettingsSelect(
+                'Sensor Threshold',
+                VALUES_THRESHOLD.map((value) => _percentOption(value)).toList(),
+                _percentOption(
+                    _device.getValue('config/sensorThreshold') ?? 10),
+                (value) {
+                  return _deviceSaveValue('config/sensorThreshold', value);
+                },
+              ),
+              SettingsSelect(
+                'Scan Period',
+                VALUES_SCANPERIOD,
+                VALUES_SCANPERIOD.firstWhere(
+                  (item) =>
+                      item['value'] == _device.getValue('config/scanInterval'),
+                  orElse: () => VALUES_SCANPERIOD[1],
+                ),
+                (value) {
+                  return _deviceSaveValue('config/scanInterval', value);
+                },
+              ),
+              SettingsHeader('GARAGE',
+              helpLink: LINK_HELP + '-garage',
+            ),
+              SettingsSelect(
+                'Door Motion Time',
+                List<Map<String, dynamic>>.generate(
+                    26, (pos) => _wholeSecondsOption(pos * 1000 + 5000)),
+                _wholeSecondsOption(
+                    _device.getValue('config/doorMotionTime') ?? 10000),
+                (value) {
+                  return _deviceSaveValue('config/doorMotionTime', value);
+                },
+              ),
+              SettingsSelect(
+                'Relay On Time',
+                VALUES_RELAYONTIME
+                    .map((value) => _fractionalSecondsOption(value))
+                    .toList(),
+                _fractionalSecondsOption(
+                    _device.getValue('config/relayOnTime') ?? 300),
+                (value) {
+                  return _deviceSaveValue('config/relayOnTime', value);
+                },
+              ),
+              SettingsSelect(
+                'Relay Off Time',
+                VALUES_RELAYOFFTIME
+                    .map((value) => _fractionalSecondsOption(value))
+                    .toList(),
+                _fractionalSecondsOption(
+                    _device.getValue('config/relayOffTime') ?? 1000),
+                (value) {
+                  return _deviceSaveValue('config/relayOffTime', value);
+                },
+              ),
+            ];
+      } else {
+        settingsItems.add(
+          SettingsItem(
+            'Status',
+            value:
+                '${_device.doorStatusString} ${_device.doorStatusTimeString}',
+          ),
+        );
+      }
+
       return Scaffold(
         appBar: AppBar(
           title: Text('Settings'),
         ),
-        bottomNavigationBar: BottomNavigation(2),
+        bottomNavigationBar: BottomNavigation(1),
         body: ListView(
-          children: <Widget>[
-            // @todo: offline option
-
-            SettingsHeader('DEVICE'),
-            SettingsItem(
-              'ID',
-              value: _device.id,
-              icon: Icons.content_copy,
-              action: (ctx) {
-                _copyToClipboard(ctx, _device.id);
-              },
-            ),
-            SettingsItem('Name', value: _device.name, icon: Icons.edit,
-                action: (ctx) {
-              _renameDevice(ctx, _device);
-            }),
-            SettingsItem(
-              'System',
-              value: _device.getValue('config/systemVersion'),
-            ),
-            SettingsItem(
-              'Firmware',
-              value: _device.getValue('config/firmwareVersion'),
-            ),
-//            SettingsItem('Last Contact', 'value'),
-            SettingsHeader('NETWORK'),
-            SettingsItem(
-              'WiFi SSID',
-              value: _device.getValue('net/ssid'),
-            ),
-            SettingsItem(
-              'Signal Quality',
-              value: ProviderAccount.wifiSignalToString(
-                _device.getValue('status/wifiSignal') as int,
-              ),
-            ),
-            SettingsItem(
-              'IP',
-              value: _device.getValue('net/ip'),
-            ),
-            SettingsItem(
-              'Gateway',
-              value: _device.getValue('net/gateway'),
-            ),
-            SettingsItem(
-              'Mask',
-              value: _device.getValue('net/subnet'),
-            ),
-            SettingsItem(
-              'MAC',
-              value: _device.getValue('net/mac'),
-            ),
-            SettingsHeader('SENSOR'),
-            SettingsItem(
-              'Status',
-              value: _device.doorStatusString,
-            ),
-            SettingsItem(
-              'Reflection',
-              value: _device.getValue('status/reflection').toString() + '%',
-            ),
-            SettingsSelect(
-              'Sensor Threshold',
-              VALUES_THRESHOLD.map((value) => _percentOption(value)).toList(),
-              _percentOption(_device.getValue('config/sensorThreshold') ?? 10),
-              (value) {
-                return _deviceSaveValue('config/sensorThreshold', value);
-              },
-            ),
-            SettingsSelect(
-              'Scan Period',
-              VALUES_SCANPERIOD,
-              VALUES_SCANPERIOD.firstWhere(
-                (item) =>
-                    item['value'] == _device.getValue('config/scanInterval'),
-                orElse: () => VALUES_SCANPERIOD[1],
-              ),
-              (value) {
-                return _deviceSaveValue('config/scanInterval', value);
-              },
-            ),
-            SettingsHeader('OPENER'),
-            SettingsSelect(
-              'Door Motion Time',
-              List<Map<String, dynamic>>.generate(
-                  26, (pos) => _wholeSecondsOption(pos * 1000 + 5000)),
-              _wholeSecondsOption(
-                  _device.getValue('config/doorMotionTime') ?? 10000),
-              (value) {
-                return _deviceSaveValue('config/doorMotionTime', value);
-              },
-            ),
-            SettingsSelect(
-              'Relay On Time',
-              VALUES_RELAYONTIME
-                  .map((value) => _fractionalSecondsOption(value))
-                  .toList(),
-              _fractionalSecondsOption(
-                  _device.getValue('config/relayOnTime') ?? 300),
-              (value) {
-                return _deviceSaveValue('config/relayOnTime', value);
-              },
-            ),
-            SettingsSelect(
-              'Relay Off Time',
-              VALUES_RELAYOFFTIME
-                  .map((value) => _fractionalSecondsOption(value))
-                  .toList(),
-              _fractionalSecondsOption(
-                  _device.getValue('config/relayOffTime') ?? 1000),
-              (value) {
-                return _deviceSaveValue('config/relayOffTime', value);
-              },
-            ),
-          ],
+          children: settingsItems,
         ),
       );
     }

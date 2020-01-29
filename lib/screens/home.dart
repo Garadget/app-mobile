@@ -23,7 +23,6 @@ class ScreenHome extends StatefulWidget {
 
 class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
   ProviderAccount _account;
-  bool _isLoading = false;
   bool _isFirstRun = true;
   String _errorMessage;
 
@@ -33,21 +32,6 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
     super.initState();
   }
 
-  @override
-  void dispose() {
-    _account.stopTimer();
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void setState(function) {
-    if (mounted) {
-      super.setState(function);
-    }
-  }
-
-  @override
   void didChangeDependencies() {
     if (_isFirstRun) {
       _isFirstRun = false;
@@ -59,15 +43,23 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
           _account.startTimer();
         }
       });
-    } else if (_account.updateErrors) {
-      _account.clearDeviceCache();
-      _networkRequest(() => _account.loadDevices(true));
     }
     super.didChangeDependencies();
   }
 
   @override
+  void setState(function) {
+    if (mounted) {
+      super.setState(function);
+    }
+  }
+
+  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!_account.isAuthenticated) {
+      _account.fulfillLocalAuth();
+      return;
+    }
     _account.requireLocalAuth();
     if (state == AppLifecycleState.resumed) {
       localAuthChallageDialog(context, AuthLevel.ALWAYS);
@@ -77,10 +69,16 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     Widget body;
-    if (_isLoading && _errorMessage == null) {
-      return BusyScreen('Loading...');
-    } else if (_errorMessage != null) {
+
+    if (_account.updateErrors) {
+      _errorMessage = 'update error';
+    }
+
+    if (_errorMessage != null) {
       body = NetworkError(_errorMessage);
+      _errorMessage = null;
+    } else if (_account.isUpdatingDevices) {
+      return BusyScreen('Loading...');
     } else if (MediaQuery.of(context).orientation == Orientation.landscape) {
       body = _buildLandscape(context);
     } else if (MediaQuery.of(context).orientation == Orientation.portrait) {
@@ -99,7 +97,7 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
               semanticLabel: 'Refresh List',
             ),
             onPressed: () {
-              _networkRequest(() => _account.loadDevices(true));
+              _networkRequest(() => _account.loadDevices());
             },
           ),
           IconButton(
@@ -116,7 +114,7 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
               )
                   .then((result) {
                 if (result != null) {
-                  _networkRequest(() => _account.loadDevices(true));
+                  _networkRequest(() => _account.loadDevices());
                 } else {
                   _account.startTimer();
                 }
@@ -163,50 +161,47 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
   }
 
   Future<void> _networkRequest(Future<bool> request()) async {
-    if (_isLoading) {
-      return;
-    }
-    setState(() {
-      _errorMessage = null;
-      _isLoading = true;
-    });
-
+    setState(() {});
     await tryNetwork(
       request,
       onError: (error) {
-        setState(() {
-          _errorMessage = error;
-        });
+        if (error != _errorMessage) {
+          setState(() {
+            _errorMessage = error;
+          });
+        }
       },
       onRetry: () => mounted,
     );
-
-    String screen;
+    String routeName;
     if (_account.isAuthenticated) {
       if (_account.devices.length == 0) {
         // authenticated with no devices - start device setup
-        screen = ScreenDeviceAddIntro.routeName;
+        routeName = ScreenDeviceAddIntro.routeName;
       } else {
-        // authenticated with devices - stay and show device list
         setState(() {
           _errorMessage = null;
-          _isLoading = false;
         });
         return;
       }
     } else {
       if (_account.accountEmail != null) {
         // unauthenticated with previous account - login
-        screen = ScreenAccountSignin.routeName;
+        routeName = ScreenAccountSignin.routeName;
       } else {
         // unauthenticated without previous account - signup
-        screen = ScreenAccountSignup.routeName;
+        routeName = ScreenAccountSignup.routeName;
       }
     }
-    if (screen != null) {
-      Navigator.of(context).pushReplacementNamed(screen);
-      return;
+    if (routeName != null) {
+      Navigator.of(context).pushReplacementNamed(routeName);
     }
   }
 
+  @override
+  void dispose() {
+    _account.stopTimer();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 }

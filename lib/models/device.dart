@@ -9,6 +9,7 @@ class Device {
   static const STKEY_CONFIG = 'config';
   static const STKEY_NET = 'net';
   static const STKEY_ALERTS = 'alerts';
+  static const STKEY_GEO = 'geo';
 
   static String intToString(int value) {
     return value.toString();
@@ -136,6 +137,22 @@ class Device {
       'key': 'tzo',
       'prop': 'timeZone',
     },
+    {
+      'var': STKEY_GEO,
+      'prop': 'enabled',
+    },
+    {
+      'var': STKEY_GEO,
+      'prop': 'latitude',
+    },
+    {
+      'var': STKEY_GEO,
+      'prop': 'longitude',
+    },
+    {
+      'var': STKEY_GEO,
+      'prop': 'radius',
+    }
   ];
 
   final particle.Device particleDevice;
@@ -178,14 +195,22 @@ class Device {
 
   bool setValue(String path, dynamic value) {
     List<String> pathList = path.split('/');
-    Map container = _deviceData;
+    dynamic container = _deviceData;
 
     while (pathList.length > 1) {
       final loc = pathList.removeAt(0);
-      if (loc is String && container is Map && container[loc] != null) {
+      if (loc is String && container is Map) {
+        if (container[loc] == null) {
+          Map<String, dynamic> newMap = {};
+          container[loc] = newMap;
+        }
         container = container[loc];
         continue;
-      } else if (loc is int && container is List && container[loc] != null) {
+      } else if (loc is int && container is List) {
+        if (container[loc] == null) {
+          List<dynamic> newList = [];
+          container[loc] = newList;
+        }
         container = container[loc];
         continue;
       }
@@ -202,6 +227,11 @@ class Device {
 
   dynamic getValue(String path) {
 //    print('getting value $path on $id');
+
+    if (path == 'config/systemVersion') {
+      return particleDevice.systemFirmwareVersion;
+    }
+
     List<String> pathList = path.split('/');
     Map value = _deviceData;
 
@@ -259,7 +289,7 @@ class Device {
       }
       // device went offline - update status
       _connectionStatus = ConnectionStatus.OFFLINE;
-      throw('offline');
+      throw ('offline');
     });
   }
 
@@ -354,11 +384,11 @@ class Device {
         String currPath = param['var'] + '/' + param['prop'];
         if (path == currPath) {
           matchedParam = param;
-          print('updated: $path');
+//          print('updated: $path');
           break;
         }
       }
-      if (matchedParam == null) {
+      if (matchedParam == null || matchedParam['key'] == null) {
         return;
       }
       dynamic value = getValue(path);
@@ -375,7 +405,6 @@ class Device {
         clearUpdates.forEach((path) {
           _updates.remove(path);
         });
-        print('saved');
         return true;
       },
     );
@@ -392,7 +421,6 @@ class Device {
     } else {
       _connectionStatus = ConnectionStatus.ERROR;
     }
-//    print('$id: $error');
     throw (error);
   }
 
@@ -595,8 +623,17 @@ class Device {
       'id': id,
       'name': name,
       STKEY_CONFIG: getValue(STKEY_CONFIG) as Map<String, dynamic>,
+      STKEY_ALERTS: getValue(STKEY_ALERTS) as Map<String, dynamic>,
       STKEY_NET: getValue(STKEY_NET) as Map<String, dynamic>,
     };
+  }
+
+  Map<String, dynamic> get locationData {
+    return getValue(STKEY_GEO) as Map<String, dynamic>;
+  }
+
+  set locationData(Map<String, dynamic> location) {
+    setValue(STKEY_GEO, location);
   }
 
   static Device rehydrate(particle.Account account, Map<String, dynamic> data) {
@@ -608,6 +645,7 @@ class Device {
     );
     final device = Device(particleDevice);
     device.setValue(STKEY_CONFIG, data[STKEY_CONFIG]);
+    device.setValue(STKEY_ALERTS, data[STKEY_ALERTS]);
     device.setValue(STKEY_NET, data[STKEY_NET]);
     return device;
   }
@@ -627,5 +665,9 @@ class Device {
       return true;
     }
     return false;
+  }
+
+  bool get isUsingLocation {
+    return getValue('geo/enabled') ?? false;
   }
 }

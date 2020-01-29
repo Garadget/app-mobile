@@ -12,7 +12,10 @@ import '../widgets/settings_header.dart';
 import '../widgets/settings_item.dart';
 import '../widgets/settings_select.dart';
 import '../widgets/settings_toggle.dart';
+import '../widgets/geofence_map.dart';
 import './local_auth.dart';
+
+const LINK_HELP = 'https://www.garadget.com/help-alerts';
 
 const List<Map<String, dynamic>> VALUES_TIMEOUTALERT = [
   {'value': 0, 'text': 'Disabled'},
@@ -302,12 +305,14 @@ class ScreenDeviceAlerts extends StatefulWidget {
 class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
   bool _isBusy = true;
   bool _isFirstRun = true;
+  bool _mapInit = false;
   String _errorMessage;
   ProviderAccount _account;
   Device _device;
   int _previousTimeoutAlert;
   int _previousNightAlertFrom;
   int _previousNightAlertTo;
+  ScrollController _scrollController = ScrollController();
 
   @override
   void setState(function) {
@@ -319,6 +324,7 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
   // @override
   void didChangeDependencies() {
     if (_isFirstRun) {
+      _isFirstRun = false;
       _account = Provider.of<ProviderAccount>(context, listen: false);
       _device = _account.selectedDevice;
 
@@ -334,57 +340,67 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
           _isBusy = false;
         });
       });
-      _isFirstRun = false;
     }
     super.didChangeDependencies();
   }
 
   @override
   Widget build(BuildContext context) {
-    final statusAlerts = _device.getValue('alerts/statusAlert');
-    final timeoutAlert = _device.getValue('alerts/timeoutAlert');
-    if (timeoutAlert != 0) {
-      _previousTimeoutAlert = timeoutAlert;
-    }
-    final nightAlertFrom = _device.getValue('alerts/nightAlertFrom');
-    if (nightAlertFrom != 0) {
-      _previousNightAlertFrom = nightAlertFrom;
-    }
-    final nightAlertTo = _device.getValue('alerts/nightAlertTo');
-    if (nightAlertTo != 0) {
-      _previousNightAlertTo = nightAlertTo;
-    }
-    final timeZone = _device.getValue('alerts/timeZone');
-
     if (_isBusy) {
       return BusyScreen('Loading...');
     } else if (_errorMessage != null) {
       return ErrorScreen(_errorMessage);
     } else {
-      return Scaffold(
-        appBar: AppBar(
-          title: Text('Alerts'),
-        ),
-        bottomNavigationBar: BottomNavigation(1),
-        body: ListView(
+      Widget content;
+      if (_device.connectionStatus != ConnectionStatus.ONLINE) {
+        content = ErrorScreen(
+          'Device must be online to access alerts. Current status: ${_device.doorStatusString}',
+          header: 'Not Connected',
+          icon: Icons.signal_wifi_off,
+        );
+      } else {
+        final statusAlerts = _device.getValue('alerts/statusAlert');
+        final timeoutAlert = _device.getValue('alerts/timeoutAlert');
+        if (timeoutAlert != 0) {
+          _previousTimeoutAlert = timeoutAlert;
+        }
+        final nightAlertFrom = _device.getValue('alerts/nightAlertFrom');
+        if (nightAlertFrom != 0) {
+          _previousNightAlertFrom = nightAlertFrom;
+        }
+        final nightAlertTo = _device.getValue('alerts/nightAlertTo');
+        if (nightAlertTo != 0) {
+          _previousNightAlertTo = nightAlertTo;
+        }
+        final timeZone = _device.getValue('alerts/timeZone');
+        final geoEnabled = _device.getValue('geo/enabled') ?? false;
+
+        content = ListView(
+          controller: _scrollController,
           children: <Widget>[
-            SettingsHeader('STATUS ALERTS'),
+            SettingsHeader(
+              'STATUS ALERTS',
+              helpLink: LINK_HELP + '-status',
+            ),
             _getStatusAlert('Online', statusAlerts, 64),
             _getStatusAlert('Offline', statusAlerts, 128),
             _getStatusAlert('Open', statusAlerts, 8),
             _getStatusAlert('Closed', statusAlerts, 1),
             _getStatusAlert('Stopped', statusAlerts, 16),
-            SettingsHeader('TIMEOUT ALERT'),
+            SettingsHeader(
+              'TIMEOUT ALERT',
+              helpLink: LINK_HELP + '-timeout',
+            ),
             SettingsToggle(
               'Enable',
               timeoutAlert != 0,
               (value) {
                 _deviceSaveValue(
-                        'alerts/timeoutAlert',
-                        timeoutAlert == 0
-                            ? _previousTimeoutAlert ??
-                                VALUES_TIMEOUTALERT[8]['value']
-                            : 0);
+                    'alerts/timeoutAlert',
+                    timeoutAlert == 0
+                        ? _previousTimeoutAlert ??
+                            VALUES_TIMEOUTALERT[8]['value']
+                        : 0);
               },
             ),
             timeoutAlert == 0
@@ -400,7 +416,10 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                       return _deviceSaveValue('alerts/timeoutAlert', value);
                     },
                   ),
-            SettingsHeader('NIGHT ALERT'),
+            SettingsHeader(
+              'NIGHT ALERT',
+              helpLink: LINK_HELP + '-night',
+            ),
             SettingsToggle(
               'Enable',
               nightAlertFrom != nightAlertTo,
@@ -419,7 +438,8 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                     icon: Icons.chevron_right,
                     action: (ctx) {
                       _pickTime(ctx, nightAlertFrom, (value) {
-                        _deviceSaveValue('alerts/nightAlertFrom', _timeToInt(value));
+                        _deviceSaveValue(
+                            'alerts/nightAlertFrom', _timeToInt(value));
                       });
                     },
                   ),
@@ -431,7 +451,8 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                     icon: Icons.chevron_right,
                     action: (ctx) {
                       _pickTime(ctx, nightAlertTo, (value) {
-                        _deviceSaveValue('alerts/nightAlertTo', _timeToInt(value));
+                        _deviceSaveValue(
+                            'alerts/nightAlertTo', _timeToInt(value));
                       });
                     },
                   ),
@@ -448,16 +469,61 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                       return _deviceSaveValue('alerts/timeZone', value);
                     },
                   ),
-            SettingsHeader('DEPARTURE ALERT'),
+            SettingsHeader(
+              'DEPARTURE ALERT',
+              helpLink: LINK_HELP + '-departure',
+            ),
             SettingsToggle(
               'Enable',
-              false,
+              geoEnabled,
               (value) {
-                print('hello');
+                if (value && !_mapInit) {
+                  _mapInit = true;
+                  showBusyMessage(context, 'Loading Map');
+                }
+                return _deviceSaveValue('geo/enabled', value);
               },
             ),
+            geoEnabled
+                ? GeofenceMap(
+                    latitude: _device.getValue('geo/latitude'),
+                    longitude: _device.getValue('geo/longitude'),
+                    radius: _device.getValue('geo/radius'),
+                    onChange: (latitude, longitude, radius) {
+                      if (_mapInit) {
+                        _mapInit = false;
+                        Navigator.of(context).pop();
+                        return _scrollController.animateTo(
+                          _scrollController.position.maxScrollExtent,
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeOut,
+                        );
+                      }
+                      _device.setValue('geo/latitude', latitude);
+                      _device.setValue('geo/longitude', longitude);
+                      _device.setValue('geo/radius', radius);
+                      return _deviceSaveValue('geo/enabled', true);
+                    },
+                    onError: (error) {
+                      _mapInit = false;
+                      Navigator.of(context).pop();
+                      showErrorDialog(
+                          context, 'Location Services Error', error.toString());
+                      _deviceSaveValue('geo/enabled', false);
+                      setState(() {});
+                    },
+                  )
+                : SizedBox.shrink(),
           ],
+        );
+      }
+
+      return Scaffold(
+        appBar: AppBar(
+          title: Text('Alerts'),
         ),
+        bottomNavigationBar: BottomNavigation(2),
+        body: content,
       );
     }
   }
@@ -481,9 +547,13 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
       _device.setValue(key, value);
       return _device.saveConfig();
     }).then((_) {
-      return _account.storeDevices();
+      return Future.wait([
+        _account.storeDevices(),
+        _account.subscribeToNotifications(),
+      ]);
     }).catchError((error) {
-      _errorMessage = error;
+      _errorMessage = error.toString();
+      print('Error: $_errorMessage');
       _device.setValue(key, oldValue);
     }).whenComplete(() {
       setState(() {});

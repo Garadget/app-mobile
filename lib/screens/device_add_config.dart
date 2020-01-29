@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../packages/particle_setup/lib/particle_setup.dart';
+import 'package:particle_setup/particle_setup.dart';
 import 'package:pointycastle/asymmetric/api.dart';
 
 import '../widgets/error_message.dart';
@@ -53,7 +53,6 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
       _isFirstRun = false;
       _claimCode = ModalRoute.of(context).settings.arguments as String;
       _account = Provider.of<ProviderAccount>(context, listen: false);
-      _account.stopTimer();
       _account.initStorage();
       _testConnection();
     }
@@ -433,7 +432,6 @@ class WifiEntry extends StatelessWidget {
                   overflow: TextOverflow.fade,
                 ),
                 Text(
-                  // @todo: add signal level and sorting
                   entry.wifiSecurityType.toString() +
                       ', ' +
                       entry.wifiSignalStrength.toString(),

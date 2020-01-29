@@ -95,7 +95,7 @@ class _ScreenDeviceAddConfirmState extends State<ScreenDeviceAddConfirm> {
       }
       try {
         if (_device == null) {
-          await _account.loadDevices(false);
+          await _account.loadDevices();
           setState(() {
             _wifiAdvice = false;
             _isPhoneOnline = true;

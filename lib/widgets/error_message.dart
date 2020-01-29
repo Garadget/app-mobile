@@ -49,14 +49,40 @@ Future showErrorDialog(BuildContext context, String title, String message) {
 }
 
 class ErrorScreen extends StatelessWidget {
+  final String header;
   final String message;
-  ErrorScreen(this.message);
+  final IconData icon;
+  ErrorScreen(this.message, {this.header, this.icon});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: ErrorMessage(message),
+        child: Center(
+      child: Padding(
+        padding: EdgeInsets.all(15.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              icon ?? Icons.error_outline,
+              size: 54,
+            ),
+            const SizedBox(height: 15),
+            Text(
+              header ?? 'Error',
+              style: Theme.of(context).textTheme.title,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.body2,
+            ),
+          ],
+        ),
+      ),
+    ),
       ),
     );
   }
