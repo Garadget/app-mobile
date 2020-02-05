@@ -314,7 +314,7 @@ class _ScreenDeviceAddConfirmState extends State<ScreenDeviceAddConfirm> {
               onPressed: () {
                 Navigator.of(context).pop();
                 Navigator.of(context).pop();
-                Navigator.of(context).pop(true);
+                Navigator.of(context).pop(_deviceId);
               },
             );
       actionButton = RaisedButton(
@@ -370,7 +370,7 @@ class _ScreenDeviceAddConfirmState extends State<ScreenDeviceAddConfirm> {
       Navigator.of(context).pop(); // to confirm
       Navigator.of(context).pop(); // to configure
       Navigator.of(context).pop(); // to intro
-      Navigator.of(context).pop(true); // to home
+      Navigator.of(context).pop(_deviceId); // to home
     }
     catch(error) {
       showErrorDialog(context, 'Error Renaming',

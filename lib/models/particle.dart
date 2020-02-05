@@ -226,7 +226,7 @@ class Device {
   Future<bool> unclaim() {
     return account
         .delete(
-            '${Account.BASEURL}/products/${secrets.PROD_ID}/devices/$id/owner')
+            '${Account.BASEURL}/devices/$id')
         .then((response) {
       var body = account.parseResponse(response) as Map<String, dynamic>;
       return body['ok'];

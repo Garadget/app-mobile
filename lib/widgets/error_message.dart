@@ -59,30 +59,30 @@ class ErrorScreen extends StatelessWidget {
     return Scaffold(
       body: SafeArea(
         child: Center(
-      child: Padding(
-        padding: EdgeInsets.all(15.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Icon(
-              icon ?? Icons.error_outline,
-              size: 54,
+          child: Padding(
+            padding: EdgeInsets.all(15.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Icon(
+                  icon ?? Icons.error_outline,
+                  size: 54,
+                ),
+                const SizedBox(height: 15),
+                Text(
+                  header ?? 'Error',
+                  style: Theme.of(context).textTheme.title,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.body2,
+                ),
+              ],
             ),
-            const SizedBox(height: 15),
-            Text(
-              header ?? 'Error',
-              style: Theme.of(context).textTheme.title,
-            ),
-            const SizedBox(height: 10),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.body2,
-            ),
-          ],
+          ),
         ),
-      ),
-    ),
       ),
     );
   }

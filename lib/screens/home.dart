@@ -7,6 +7,7 @@ import '../widgets/device_card.dart';
 import '../widgets/device_carousel.dart';
 import '../widgets/busy_message.dart';
 import '../widgets/network_error.dart';
+import '../widgets/snackbar_message.dart';
 import './device_add_intro.dart';
 import './account_signin.dart';
 import './account_signup.dart';
@@ -61,18 +62,23 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
       return;
     }
     _account.requireLocalAuth();
-    if (state == AppLifecycleState.resumed) {
-      localAuthChallageDialog(context, AuthLevel.ALWAYS);
+
+    switch (state) {
+      case AppLifecycleState.detached:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+        _account.isAppActive = false;
+        break;
+      case AppLifecycleState.resumed:
+        _account.isAppActive = true;
+        localAuthChallageDialog(context, AuthLevel.ALWAYS);
+        break;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     Widget body;
-
-    if (_account.updateErrors) {
-      _errorMessage = 'update error';
-    }
 
     if (_errorMessage != null) {
       body = NetworkError(_errorMessage);
@@ -112,12 +118,13 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
                 ScreenDeviceAddIntro.routeName,
                 arguments: null,
               )
-                  .then((result) {
-                if (result != null) {
-                  _networkRequest(() => _account.loadDevices());
-                } else {
-                  _account.startTimer();
-                }
+                  .then((deviceId) {
+                _networkRequest(() => _account.loadDevices()).then((_) {
+                  if (deviceId != null) {
+                    _account.deviceSelectById(deviceId);
+                  }
+                });
+                _account.startTimer();
               });
             },
           )
@@ -125,6 +132,9 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
       ),
       drawer: WidgetHomeDrawer(),
       body: body,
+      bottomNavigationBar: _account.updateErrors.length > 0
+          ? FooterErrorMessaage(_account.updateErrors.join('\n'))
+          : null,
     );
   }
 

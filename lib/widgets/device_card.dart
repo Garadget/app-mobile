@@ -6,42 +6,51 @@ import '../providers/account.dart';
 import '../providers/device_status.dart';
 import '../providers/device_info.dart';
 import '../screens/device_settings.dart';
+import '../widgets/snackbar_message.dart';
 
 const STRING_PLACEHOLDER = '...';
 
 class WidgetDeviceCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final account = Provider.of<ProviderAccount>(context, listen: false);
+    final _account = Provider.of<ProviderAccount>(context, listen: false);
     Provider.of<ProviderDeviceStatus>(context, listen: true);
     Provider.of<ProviderDeviceInfo>(context, listen: true);
-    final device = account.selectedDevice;
-    if (device == null) {
+    final _device = _account.selectedDevice;
+
+    if (_account.initErrors.length > 0) {
+      Future.delayed(Duration.zero, () {
+        showSnackbarMessage(context, _account.initErrors.join("\n"));
+        _account.initErrors.clear();
+      });
+    }
+
+    if (_device == null) {
       return SizedBox.shrink();
     }
 
     final List<Widget> cards = [
       WidgetCardTile(
         icon: Icons.line_weight,
-        title: 'Status: ${device.doorStatusString}',
-        subtitle: device.doorStatusTimeString,
+        title: 'Status: ${_device.doorStatusString}',
+        subtitle: _device.doorStatusTimeString,
       ),
     ];
-    if (device.connectionStatus == ConnectionStatus.ONLINE) {
+    if (_device.connectionStatus == ConnectionStatus.ONLINE) {
       cards.add(
         WidgetCardTile(
           icon: Icons.brightness_5,
-          title: 'Reflection: ${device.getValue('status/reflection') ?? STRING_PLACEHOLDER}%',
-          subtitle: 'Ambient Light: ${device.getValue('status/ambientLight') ?? STRING_PLACEHOLDER}%',
+          title: 'Reflection: ${_device.getValue('status/reflection') ?? STRING_PLACEHOLDER}%',
+          subtitle: 'Ambient Light: ${_device.getValue('status/ambientLight') ?? STRING_PLACEHOLDER}%',
         ),
       );
-      final int wifiSignal = device.getValue('status/wifiSignal');
+      final int wifiSignal = _device.getValue('status/wifiSignal');
       final String wifiSignalString = wifiSignal == null ? STRING_PLACEHOLDER : ProviderAccount.wifiSignalToString(wifiSignal);
       cards.add(
         WidgetCardTile(
           icon: Icons.wifi,
           title: 'WiFi: $wifiSignalString',
-          subtitle: 'SSID: ${device.getValue('net/ssid') ?? STRING_PLACEHOLDER}',
+          subtitle: 'SSID: ${_device.getValue('net/ssid') ?? STRING_PLACEHOLDER}',
         ),
       );
     }
@@ -53,7 +62,7 @@ class WidgetDeviceCard extends StatelessWidget {
         tapHandler: () {
           Navigator.of(context).pushNamed(
             ScreenDeviceSettings.routeName,
-            arguments: device,
+            arguments: _device,
           );
         }),
     );
@@ -85,6 +94,7 @@ class WidgetCardTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+
     List<Widget> columns = [
       Icon(
         icon,

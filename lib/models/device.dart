@@ -193,6 +193,10 @@ class Device {
     });
   }
 
+  Future<bool> remove() {
+    return particleDevice.unclaim();
+  }
+
   bool setValue(String path, dynamic value) {
     List<String> pathList = path.split('/');
     dynamic container = _deviceData;

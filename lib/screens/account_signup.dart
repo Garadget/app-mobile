@@ -147,7 +147,7 @@ class _ScreenAccountSignupState extends State<ScreenAccountSignup> {
                         return null;
                       },
                       onChanged: (value) {
-                        _username = value.toLowerCase();
+                        _username = value.trim().toLowerCase();
                       },
                     ),
                     SizedBox(

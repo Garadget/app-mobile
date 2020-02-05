@@ -9,6 +9,8 @@
 .history
 .svn/
 .code-workspace
+.secret
+key.properties
 
 # sensitive configuration
 lib/config/secrets.dart

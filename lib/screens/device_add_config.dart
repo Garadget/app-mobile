@@ -34,6 +34,7 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
   bool _isPasswordObscured = true;
   String _errorMessage;
   ProviderAccount _account;
+  int _localNotificationId;
 
   String _claimCode;
   String _password;
@@ -51,6 +52,7 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
   void didChangeDependencies() {
     if (_isFirstRun) {
       _isFirstRun = false;
+      _localNotificationId = null;
       _claimCode = ModalRoute.of(context).settings.arguments as String;
       _account = Provider.of<ProviderAccount>(context, listen: false);
       _account.initStorage();
@@ -198,6 +200,9 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
                   if (ap.wifiSecurityType == WifiSecurity.OPEN) {
                     _isComplete = true;
                   }
+                  if (_localNotificationId != null) {
+                    _account.localNotificationRemove(_localNotificationId);
+                  }
                 });
               },
             ));
@@ -235,7 +240,7 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
                       child: const Text('Cancel'),
                       onPressed: () {
                         Navigator.of(context).pop();
-                        Navigator.of(context).pop(_isComplete ? true : null);
+                        Navigator.of(context).pop(_isComplete ? _deviceId : null);
                       },
                     ),
               RaisedButton(
@@ -343,7 +348,13 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
             throw ('Error getting public key');
           }
         }
-//        print('pong');
+        // print('pong');
+        if (!_account.isAppActive && _localNotificationId == null) {
+          _localNotificationId = await _account.localNotificationShow(
+            "Return to Garadget App",
+            "Click here to continue device setup",
+          );
+        }
         setState(() {
           _isConnected = true;
         });

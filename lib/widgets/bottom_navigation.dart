@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../screens/home.dart';
-import '../screens/device_alerts.dart';
 import '../screens/device_settings.dart';
+import '../screens/device_alerts.dart';
+import '../screens/device_remove.dart';
 
 class BottomNavigation extends StatelessWidget {
 
@@ -11,6 +12,7 @@ class BottomNavigation extends StatelessWidget {
     ScreenHome.routeName,
     ScreenDeviceSettings.routeName,
     ScreenDeviceAlerts.routeName,
+    ScreenDeviceRemove.routeName,
   ];
 
   BottomNavigation(this.currentIndex);
@@ -34,7 +36,7 @@ class BottomNavigation extends StatelessWidget {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.delete),
-            title: Text('Delete'),
+            title: Text('Remove'),
           ),
         ],
         currentIndex: currentIndex,

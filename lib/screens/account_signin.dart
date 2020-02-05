@@ -12,6 +12,8 @@ import '../widgets/bottom_bar_button.dart';
 import '../widgets/form_logo.dart';
 import './home.dart';
 
+// TODO: add accessibility labels
+
 class ScreenAccountSignin extends StatefulWidget {
   static const routeName = "/account/signin";
 
@@ -146,14 +148,14 @@ class _ScreenAccountSigninState extends State<ScreenAccountSignin> {
                           return 'Email is required';
                         }
                         final re = RegExp(
-                            r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
+                            r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9\-]+\.[a-zA-Z]+");
                         if (!re.hasMatch(value)) {
                           return 'Invalid format of Email';
                         }
                         return null;
                       },
                       onChanged: (value) {
-                        _username = value.toLowerCase();
+                        _username = value.trim().toLowerCase();
                       },
                     ),
                     SizedBox(

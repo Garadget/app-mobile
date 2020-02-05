@@ -11,7 +11,7 @@ description: Garadget App
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 2.0.0+1
+version: 2.0.1+2
 
 environment:
   sdk: ">=2.3.0 <3.0.0"
@@ -26,7 +26,7 @@ dependencies:
   flare_flutter: ^1.5.4
   provider: ^3.0.0
   http: ^0.12.0+2
-  shared_preferences: ^0.5.3+5
+  shared_preferences: ^0.5.3
   flutter_time_picker_spinner: ^1.0.6
   url_launcher: ^5.4.1
   package_info: ^0.4.0+13
@@ -35,9 +35,10 @@ dependencies:
   geolocator: ^5.2.0
   google_maps_flutter: ^0.5.21+15
   latlong: ^0.6.1
-#  geofencing:
-#    git:
-#      url: https://github.com/bkonyi/FlutterGeofencing.git
+  flutter_local_notifications: ^1.1.5+1
+  geofencing:
+    git:
+      url: https://github.com/bkonyi/FlutterGeofencing.git
 #  geofencing:
 #     path: ./lib/packages/FlutterGeofencing
   particle_setup:
@@ -64,7 +65,8 @@ flutter:
     - assets/images/logo-boxed.svg
     - assets/animations/garage-door.flr # https://rive.app/a/garadget/files/flare/garage
     - assets/images/powerup.png
-    - assets/images/map-icon-location.png
+    - assets/images/map-pin@1x.png
+    - assets/images/map-pin@3x.png
   #  - images/a_dot_ham.jpeg
 
   # An image asset can refer to one or more resolution-specific "variants", see

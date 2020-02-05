@@ -7,7 +7,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
-//import 'package:geofencing/geofencing.dart';
+import 'package:geofencing/geofencing.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../models/device.dart';
 import '../models/particle.dart' as particle;
@@ -22,6 +23,7 @@ const STKEY_AUTHTOKEN = 'authToken';
 const STKEY_AUTHLEVEL = 'authLevel';
 const STKEY_AUTHMETHOD = 'authMethod';
 const STKEY_PINCODE = 'pinCode';
+const PORT_GEOFENCE = 'garadget-geofence';
 const URL_PASSWORDRESET = 'https://garadget.com/my/json/password-reset.php';
 const URL_PUSHSUBSCRIBE = 'https://www.garadget.com/my/json/pn-signup.php';
 
@@ -41,17 +43,23 @@ class ProviderAccount with ChangeNotifier {
   final _particleAccount = particle.Account();
   final _providerDeviceStatus = ProviderDeviceStatus();
   final _providerDeviceInfo = ProviderDeviceInfo();
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging();
+  final _firebaseMessaging = FirebaseMessaging();
+  final _localNotifications = FlutterLocalNotificationsPlugin();
   List<Device> _devices = [];
   SharedPreferences _storage;
   Timer _refreshTimer;
   String _selectedDeviceId;
   bool _isUpdatingStatus = false;
   bool _isUpdatingDevices = true;
-  bool _updateErrors = false;
+  bool _isGeofenceReady = false;
+  bool _isNotificationReady = false;
+  List<String> _initErrors = [];
+  List<String> _updateErrors = [];
   bool _localAuth = true; // request local re-auth
+  bool isAppActive = true;
 
   Future<bool> init() async {
+    _initNotifications();
     await initStorage();
 
     String authToken = _storage.getString(STKEY_AUTHTOKEN);
@@ -64,9 +72,9 @@ class ProviderAccount with ChangeNotifier {
 
   void _initMessaging() {
     _firebaseMessaging.configure(
-      onMessage: (Map<String, dynamic> message) async {
-        print("onMessage: $message");
-      },
+//      onMessage: (Map<String, dynamic> message) async {
+//        print("onMessage: $message");
+//      },
       onResume: (Map<String, dynamic> message) async {
         final deviceId = message['data']['device'];
         await updateSelection(deviceId);
@@ -75,54 +83,145 @@ class ProviderAccount with ChangeNotifier {
     );
   }
 
-  Future<void> _initGeofence() async {
+  Future<void> initGeofence() async {
     if (!isUsingLocation) {
       return;
     }
-    print('Initializing...');
 
-    // String geofenceState = 'N/A';
-    // double latitude = 39.1096355;
-    // double longitude = -108.6033691;
-    // double radius = 50.0;
-    // ReceivePort port = ReceivePort();
+    ReceivePort port = ReceivePort();
+    final List<GeofenceEvent> triggers = <GeofenceEvent>[
+//      GeofenceEvent.enter,
+//      GeofenceEvent.dwell,
+      GeofenceEvent.exit
+    ];
+    final AndroidGeofencingSettings androidSettings = AndroidGeofencingSettings(
+      initialTrigger: triggers,
+      loiteringDelay: 1000 * 60,
+    );
 
-    // final List<GeofenceEvent> triggers = <GeofenceEvent>[
-    //   GeofenceEvent.enter,
-    //   GeofenceEvent.dwell,
-    //   GeofenceEvent.exit
-    // ];
-    // final AndroidGeofencingSettings androidSettings = AndroidGeofencingSettings(
-    //     initialTrigger: <GeofenceEvent>[
-    //       GeofenceEvent.enter,
-    //       GeofenceEvent.exit,
-    //       GeofenceEvent.dwell
-    //     ],
-    //     loiteringDelay: 1000 * 60);
+    try {
+      IsolateNameServer.registerPortWithName(port.sendPort, PORT_GEOFENCE);
+      port.listen((dynamic data) {
+        print('Geo Event: ${data.toString()}');
+        final Device device = getDeviceById(data as String);
+        device.loadStatus().then((status) {
+          if (!isAppActive && device.doorStatus != DoorStatus.CLOSED &&
+              device.doorStatus != DoorStatus.CLOSING) {
+            localNotificationShow(
+              'Garadget Departure Alert',
+              'You are leaving the area while ${device.name} is ${device.doorStatusString}',
+              payload: device.id,
+            );
+          }
+        });
+      });
+      await GeofencingManager.initialize();
 
-    // IsolateNameServer.registerPortWithName(
-    //     port.sendPort, 'geofencing_send_port');
-    // port.listen((dynamic data) {
-    //   print('Event: $data');
-    //   // setState(() {
-    //   //   geofenceState = data;
-    //   // });
-    // });
-    // await GeofencingManager.initialize();
-
-    // await GeofencingManager.registerGeofence(
-    //     GeofenceRegion('mtv', latitude, longitude, radius, triggers,
-    //         androidSettings: androidSettings),
-    //     callback);
-    // print('Geo ready.');
+      _devices.forEach((device) async {
+        if (device.locationData != null) {
+          await GeofencingManager.registerGeofence(
+            GeofenceRegion(
+              device.id,
+              device.locationData['latitude'],
+              device.locationData['longitude'],
+              device.locationData['radius'],
+              triggers,
+              androidSettings: androidSettings,
+            ),
+            _onGeofenceEvent,
+          );
+          print('Geofence for ${device.name} to ${device.locationData['radius']}');
+        } else {
+          await GeofencingManager.removeGeofenceById(device.id);
+        }
+      });
+    } catch (error) {
+      _initErrors.add('Error Initializing Geofencing');
+    }
+    _isGeofenceReady = true;
+    print('geo ready');
   }
 
-  // static void callback(List<String> ids, Location l, GeofenceEvent e) async {
-  //   print('Fences: $ids Location $l Event: $e');
-  //   final SendPort send =
-  //       IsolateNameServer.lookupPortByName('geofencing_send_port');
-  //   send?.send(e.toString());
-  // }
+  static void _onGeofenceEvent(
+      List<String> deviceIds, Location location, GeofenceEvent event) async {
+    final port = IsolateNameServer.lookupPortByName(PORT_GEOFENCE);
+    deviceIds.forEach((deviceId) {
+      port?.send(deviceId);
+    });
+  }
+
+  void _initNotifications() {
+    if (_isNotificationReady) {
+      return;
+    }
+    var androidSettings =
+        new AndroidInitializationSettings('notification_icon');
+    var iOsSettings = IOSInitializationSettings(
+      onDidReceiveLocalNotification: _onReceivedNotification,
+    );
+    final settings = InitializationSettings(androidSettings, iOsSettings);
+    try {
+      _localNotifications.initialize(
+        settings,
+        onSelectNotification: _onSelectNotification,
+      );
+    } catch (error) {
+      _initErrors.add('Error Initializing Local Notifications');
+    }
+    _isNotificationReady = true;
+  }
+
+  Future<dynamic> _onReceivedNotification(
+    int id,
+    String title,
+    String body,
+    String payload,
+  ) {
+    print('iOS notification: $title / $body');
+    return Future.value();
+  }
+
+  Future<dynamic> _onSelectNotification(String payload) async {
+    print('select notification');
+    if (payload != null) {
+        await updateSelection(payload);
+        return notifyListeners();
+    }
+  }
+
+  Future<int> localNotificationShow(
+    String title,
+    String body, {
+    int id,
+    String payload,
+  }) async {
+    var androidPlatformChannelSpecifics = AndroidNotificationDetails(
+      'garadget-notifications',
+      'Garadget Notifications',
+      'Garadget Notifications',
+      importance: Importance.Max,
+      priority: Priority.High,
+      ticker: 'ticker',
+    );
+    var iOSPlatformChannelSpecifics = IOSNotificationDetails();
+    var platformChannelSpecifics = NotificationDetails(
+        androidPlatformChannelSpecifics, iOSPlatformChannelSpecifics);
+    if (id == null) {
+      id = DateTime.now().microsecondsSinceEpoch % 0x7FFFFFFF;
+    }
+    await _localNotifications.show(
+      id,
+      title,
+      body,
+      platformChannelSpecifics,
+      payload: payload,
+    );
+    return id;
+  }
+
+  Future<void> localNotificationRemove(int id) async {
+    await _localNotifications.cancel(id);
+  }
 
   Future<void> initStorage() {
     if (_storage != null) {
@@ -137,7 +236,7 @@ class ProviderAccount with ChangeNotifier {
     print('stopping timer');
     if (_refreshTimer != null && _refreshTimer.isActive) {
       _refreshTimer.cancel();
-      _updateErrors = false;
+      _updateErrors = [];
     }
   }
 
@@ -186,11 +285,15 @@ class ProviderAccount with ChangeNotifier {
 
   //Device activeDevice = null;
   Future<void> deviceSelectByOrder(deviceOrder) {
-    final selectedDeviceId = getDeviceByOrder(deviceOrder).id;
-    if (selectedDeviceId == _selectedDeviceId) {
+    final deviceId = getDeviceByOrder(deviceOrder).id;
+    return deviceSelectById(deviceId);
+  }
+
+  Future<void> deviceSelectById(deviceId) {
+    if (deviceId == _selectedDeviceId) {
       return Future.value();
     }
-    return updateSelection(selectedDeviceId).then((_) {
+    return updateSelection(deviceId).then((_) {
       return _providerDeviceStatus.update();
     });
   }
@@ -290,7 +393,7 @@ class ProviderAccount with ChangeNotifier {
       return;
     }
     final Map<String, dynamic> locationData = json.decode(config);
-    _devices.forEach((device){
+    _devices.forEach((device) {
       if (locationData[device.id] != null) {
         device.locationData = locationData[device.id];
       }
@@ -309,7 +412,7 @@ class ProviderAccount with ChangeNotifier {
     print('account loaded');
     subscribeToNotifications();
     _initMessaging();
-    _initGeofence();
+    initGeofence();
   }
 
   Future<void> storeDevices() async {
@@ -333,7 +436,7 @@ class ProviderAccount with ChangeNotifier {
     }
     _isUpdatingStatus = true;
     bool stausUpdated = false;
-    bool updateErrors = false;
+    List<String> updateErrors = [];
     try {
       await Future.wait(
         _devices.map((device) async {
@@ -342,19 +445,20 @@ class ProviderAccount with ChangeNotifier {
             if (deviceStatusUpdated) {
               stausUpdated = true;
             }
-          } catch (error) {
-            if (error.toString() != 'timeout' &&
-                error.toString() != 'offline') {
+          } catch (exception) {
+            final error = exception.toString();
+            if (error != 'timeout' && error != 'offline') {
               // flag account level request errors
-              updateErrors = true;
+              updateErrors.add('${device.name}:  $error');
             }
             stausUpdated = true;
           }
         }).toList(),
       );
     } finally {
-      if (updateErrors != _updateErrors) {
-        _updateErrors = updateErrors;
+      final errorUpdated = updateErrors.length != _updateErrors.length;
+      _updateErrors = updateErrors;
+      if (errorUpdated) {
         notifyListeners();
       } else if (stausUpdated) {
         _providerDeviceStatus.update();
@@ -400,6 +504,18 @@ class ProviderAccount with ChangeNotifier {
     return appDevice;
   }
 
+  Future<void> removeDevice(String deviceId) {
+    stopTimer();
+    return getDeviceById(deviceId).remove().then((_) {
+      _devices.removeWhere((device) => device.id == deviceId);
+      return storeDevices();
+    }).then((_) {
+      return loadDevices();
+    }).then((_) {
+      startTimer();
+    });
+  }
+
   void deviceCommand(String deviceId, DoorCommands command) {
     final device = getDeviceById(_selectedDeviceId);
     if (device.connectionStatus != ConnectionStatus.ONLINE) {
@@ -423,7 +539,11 @@ class ProviderAccount with ChangeNotifier {
 
   bool get isUsingLocation {
     return _devices.fold(
-      false, (value, device) => value || device.isUsingLocation);
+        false, (value, device) => value || device.isUsingLocation);
+  }
+
+  bool get isGeofenceReady {
+    return _isGeofenceReady;
   }
 
   Future<bool> subscribeToNotifications() async {
@@ -512,7 +632,11 @@ class ProviderAccount with ChangeNotifier {
     return _selectedDeviceId;
   }
 
-  bool get updateErrors {
+  List<String> get initErrors {
+    return _initErrors;
+  }
+
+  List<String> get updateErrors {
     return _updateErrors;
   }
 

@@ -11,8 +11,9 @@ import './screens/account_signup.dart';
 import './screens/account_signin.dart';
 import './screens/account_reset.dart';
 import './screens/local_auth.dart';
-import './screens/device_alerts.dart';
 import './screens/device_settings.dart';
+import './screens/device_alerts.dart';
+import './screens/device_remove.dart';
 import './screens/device_add_intro.dart';
 import './screens/device_add_config.dart';
 import './screens/device_add_confirm.dart';
@@ -80,6 +81,7 @@ class App extends StatelessWidget {
           ScreenLocalAuth.routeName: (_) => ScreenLocalAuth(),
           ScreenDeviceSettings.routeName: (_) => ScreenDeviceSettings(),
           ScreenDeviceAlerts.routeName: (_) => ScreenDeviceAlerts(),
+          ScreenDeviceRemove.routeName: (_) => ScreenDeviceRemove(),
           ScreenDeviceAddIntro.routeName: (_) => ScreenDeviceAddIntro(),
           ScreenDeviceAddConfig.routeName: (_) => ScreenDeviceAddConfig(),
           ScreenDeviceAddConfirm.routeName: (_) => ScreenDeviceAddConfirm(),

@@ -502,6 +502,7 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                       _device.setValue('geo/latitude', latitude);
                       _device.setValue('geo/longitude', longitude);
                       _device.setValue('geo/radius', radius);
+                      _account.initGeofence();
                       return _deviceSaveValue('geo/enabled', true);
                     },
                     onError: (error) {

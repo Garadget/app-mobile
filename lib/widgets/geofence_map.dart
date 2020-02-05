@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/gestures.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:latlong/latlong.dart' as latlong;
+import 'package:flutter/services.dart';
 
 const MAP2RADIUS = 0.4;
 
@@ -38,7 +40,6 @@ class _GeofenceMapState extends State<GeofenceMap> {
 
   @override
   Widget build(BuildContext context) {
-
     return FutureBuilder(
       future: _locationReady ? Future.value(true) : _initLocation(),
       builder: (context, snapshot) {
@@ -50,7 +51,10 @@ class _GeofenceMapState extends State<GeofenceMap> {
 
           final Set<Marker> _markers = {
             Marker(
-                markerId: MarkerId('marker'), position: _location, icon: _icon)
+              markerId: MarkerId('marker'),
+              position: _location,
+              icon: _icon,
+            )
           };
 
           final Set<Circle> _circles = {
@@ -94,6 +98,7 @@ class _GeofenceMapState extends State<GeofenceMap> {
                     _radius = mapWidth * MAP2RADIUS;
                   }
                   _location = loc.target;
+                  setState(() {});
                 },
                 onTap: (val) async {
                   await _mapController
@@ -111,7 +116,8 @@ class _GeofenceMapState extends State<GeofenceMap> {
                   final center2corner = _radius / MAP2RADIUS * 0.707106781;
                   var northeast = distance.offset(center, center2corner, 45);
                   var southwest = distance.offset(center, center2corner, 225);
-
+                  // want for map to finish initializing
+                  await _mapController.getVisibleRegion();
                   await _mapController.animateCamera(
                     CameraUpdate.newLatLngBounds(
                       LatLngBounds(
@@ -146,7 +152,15 @@ class _GeofenceMapState extends State<GeofenceMap> {
             );
           });
         } else if (snapshot.hasError) {
-          return Text('Error Initializing Map: ${snapshot.error.toString()}');
+          return Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Text(
+              'Error Initializing Map: ${snapshot.error.toString()}',
+              style: TextStyle(
+                color: Theme.of(context).errorColor,
+              ),
+            ),
+          );
         } else {
           return Padding(
             padding: const EdgeInsets.all(20),
@@ -166,32 +180,25 @@ class _GeofenceMapState extends State<GeofenceMap> {
         widget.longitude,
       );
     } else {
-      GeolocationStatus geolocationStatus =
-          await Geolocator().checkGeolocationPermissionStatus();
-      if (geolocationStatus == GeolocationStatus.denied) {
-        final String error =
-            'The app was unable to access the location. Make sure the location services are turned on and enabled for this app.';
-        if (widget.onError != null) {
-          widget.onError(error);
-          return false;
-        } else {
-          throw (error);
-        }
+      try {
+        final location = await Geolocator().getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.best,
+          locationPermissionLevel: GeolocationPermission.locationAlways,
+        );
+        _location = LatLng(
+          location.latitude,
+          location.longitude,
+        );
+      } on PlatformException catch (error) {
+        throw ('The app was unable to access the location. Make sure the location services are turned on and enabled for this app.\n\nSystem Response: ${error.message}');
       }
-      final location = await Geolocator().getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.best,
-      );
-      _location = LatLng(
-        location.latitude,
-        location.longitude,
-      );
     }
     _radius = widget.radius ?? 100.00;
     final config =
         createLocalImageConfiguration(context, size: const Size(32, 44));
     _icon = await BitmapDescriptor.fromAssetImage(
       config,
-      'assets/images/map-icon-location.png',
+      Platform.isAndroid ? 'assets/images/map-pin@1x.png' : 'assets/images/map-pin@3x.png',
     );
     _locationReady = true;
     return true;
