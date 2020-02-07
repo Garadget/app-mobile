@@ -29,7 +29,7 @@ class SettingsSelect extends StatelessWidget {
               label,
               softWrap: false,
             ),
-            SizedBox(
+            const SizedBox(
               width: 10,
             ),
             Expanded(
@@ -41,7 +41,7 @@ class SettingsSelect extends StatelessWidget {
                 overflow: TextOverflow.fade,
               ),
             ),
-            SizedBox(
+            const SizedBox(
               width: 5,
               height: 40,
             ),

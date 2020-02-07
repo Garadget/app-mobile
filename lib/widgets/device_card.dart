@@ -101,7 +101,7 @@ class WidgetCardTile extends StatelessWidget {
         size: 30,
         color: Colors.grey,
       ),
-      SizedBox(
+      const SizedBox(
         width: 10,
       ),
       Expanded(

@@ -5,7 +5,7 @@ class FormLogo extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(15, 15, 15, 25),
+      padding: const EdgeInsets.fromLTRB(15, 15, 15, 35),
       child: SvgPicture.asset(
         'assets/images/logo-boxed.svg',
         color: Theme.of(context).primaryColor,

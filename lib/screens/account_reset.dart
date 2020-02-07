@@ -160,13 +160,6 @@ class _ScreenAccountResetState extends State<ScreenAccountReset> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Text(
-                      'Password Reset',
-                      style: Theme.of(context).textTheme.title,
-                    ),
-                    SizedBox(
-                      height: 12,
-                    ),
                     TextFormField(
                       autocorrect: false,
                       autofocus: accountEmail == null,
@@ -191,7 +184,7 @@ class _ScreenAccountResetState extends State<ScreenAccountReset> {
                         _username = value.toLowerCase();
                       },
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                     RaisedButton(
@@ -210,6 +203,9 @@ class _ScreenAccountResetState extends State<ScreenAccountReset> {
     }
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Password Reset'),
+      ),
       body: SafeArea(
         child: body,
       ),

@@ -33,7 +33,7 @@ class SettingsItem extends StatelessWidget {
     }
 
     if (icon != null) {
-      items.add(SizedBox(
+      items.add(const SizedBox(
         width: 5,
         height: 40,
       ));
@@ -45,7 +45,7 @@ class SettingsItem extends StatelessWidget {
         ),
       );
     } else {
-      items.add(SizedBox(
+      items.add(const SizedBox(
         height: 40,
         width: 29,
       ));

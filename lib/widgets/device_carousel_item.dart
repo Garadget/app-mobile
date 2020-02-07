@@ -13,7 +13,7 @@ import '../screens/local_auth.dart';
 class WidgetDeviceCarouselItem extends StatefulWidget {
   final Device device;
 
-  WidgetDeviceCarouselItem(this.device);
+  WidgetDeviceCarouselItem(this.device): super(key: Key(device.id));
 
   @override
   _WidgetDeviceCarouselItemState createState() =>
@@ -149,6 +149,7 @@ class _WidgetDeviceCarouselItemState extends State<WidgetDeviceCarouselItem> {
         _startVerticalDragDetails.globalPosition.dy;
 
     if (dx.abs() > dy.abs() || dy.abs() < 30) {
+      _tapCommand();
       return;
     }
     if (dy > 0) {

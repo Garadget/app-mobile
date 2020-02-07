@@ -13,8 +13,8 @@ class LinkedText extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(5, 10, 0, 0),
       child: Row(
         children: <Widget>[
-          Text('•'),
-          SizedBox(
+          const Text('•'),
+          const SizedBox(
             width: 5,
           ),
           InkWell(

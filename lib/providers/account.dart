@@ -4,9 +4,11 @@ import 'dart:isolate';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:geolocator/geolocator.dart';
 import 'package:geofencing/geofencing.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -88,10 +90,20 @@ class ProviderAccount with ChangeNotifier {
       return;
     }
 
-    ReceivePort port = ReceivePort();
+    try {
+      await Geolocator().getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.best,
+        locationPermissionLevel: GeolocationPermission.locationAlways,
+      );
+    } on PlatformException catch (error) {
+      _initErrors.add(
+          'The app was unable to access the location used for departure alert.\nMake sure the location services are turned on and enabled for this app.\n\nSystem Response: ${error.message}');
+      return;
+    }
+
     final List<GeofenceEvent> triggers = <GeofenceEvent>[
-//      GeofenceEvent.enter,
-//      GeofenceEvent.dwell,
+      // GeofenceEvent.enter,
+      // GeofenceEvent.dwell,
       GeofenceEvent.exit
     ];
     final AndroidGeofencingSettings androidSettings = AndroidGeofencingSettings(
@@ -100,26 +112,57 @@ class ProviderAccount with ChangeNotifier {
     );
 
     try {
-      IsolateNameServer.registerPortWithName(port.sendPort, PORT_GEOFENCE);
-      port.listen((dynamic data) {
-        print('Geo Event: ${data.toString()}');
-        final Device device = getDeviceById(data as String);
-        device.loadStatus().then((status) {
-          if (!isAppActive && device.doorStatus != DoorStatus.CLOSED &&
-              device.doorStatus != DoorStatus.CLOSING) {
+      if (!_isGeofenceReady) {
+        ReceivePort port = ReceivePort();
+        IsolateNameServer.registerPortWithName(port.sendPort, PORT_GEOFENCE);
+        port.listen((dynamic data) {
+          print('Geo Event: $data');
+          final List<dynamic> deviceIds = json.decode(data)['ids'];
+          final List<String> statusList = [];
+          String firstId;
+
+          Future.wait(deviceIds.map((deviceId) {
+            final Device device = getDeviceById(deviceId as String);
+            return device.loadStatus().then((status) {
+              if (!isAppActive &&
+                  device.doorStatus != DoorStatus.CLOSED &&
+                  device.doorStatus != DoorStatus.CLOSING) {
+                statusList.add(device.name + ' is ' + device.doorStatusString);
+                if (firstId == null) {
+                  firstId = deviceId;
+                }
+              }
+            });
+          }).toList())
+              .then((_) {
+            if (statusList.isEmpty) {
+              return;
+            }
+            String statusString = statusList.removeLast();
+            if (statusList.isNotEmpty) {
+              statusString = statusList.join(', ') + ' and ' + statusString;
+            }
+            print('notifying');
             localNotificationShow(
               'Garadget Departure Alert',
-              'You are leaving the area while ${device.name} is ${device.doorStatusString}',
-              payload: device.id,
+              'You are leaving the area while $statusString',
+              payload: firstId,
             );
-          }
+          }).catchError((error) {
+            localNotificationShow(
+              'Garadget Departure Alert',
+              'You are leaving the area, but the status of the door is unknown due to connection issue',
+              payload: deviceIds[0],
+            );
+          });
         });
-      });
-      await GeofencingManager.initialize();
+        await GeofencingManager.initialize();
+        _isGeofenceReady = true;
+      }
 
-      _devices.forEach((device) async {
+      await Future.wait(_devices.map((device) {
         if (device.locationData != null) {
-          await GeofencingManager.registerGeofence(
+          return GeofencingManager.registerGeofence(
             GeofenceRegion(
               device.id,
               device.locationData['latitude'],
@@ -130,24 +173,25 @@ class ProviderAccount with ChangeNotifier {
             ),
             _onGeofenceEvent,
           );
-          print('Geofence for ${device.name} to ${device.locationData['radius']}');
         } else {
-          await GeofencingManager.removeGeofenceById(device.id);
+          return GeofencingManager.removeGeofenceById(device.id);
         }
-      });
+      }).toList());
     } catch (error) {
-      _initErrors.add('Error Initializing Geofencing');
+      _initErrors.add('Error Initializing Geofencing: ${error.toString()}');
     }
-    _isGeofenceReady = true;
-    print('geo ready');
   }
 
   static void _onGeofenceEvent(
-      List<String> deviceIds, Location location, GeofenceEvent event) async {
+    List<String> deviceIds,
+    Location location,
+    GeofenceEvent event,
+  ) {
     final port = IsolateNameServer.lookupPortByName(PORT_GEOFENCE);
-    deviceIds.forEach((deviceId) {
-      port?.send(deviceId);
-    });
+    print('geofence event ${event.toString()} for: ${deviceIds.toString()}');
+    port?.send(json.encode({
+      'ids': deviceIds,
+    }));
   }
 
   void _initNotifications() {
@@ -184,8 +228,8 @@ class ProviderAccount with ChangeNotifier {
   Future<dynamic> _onSelectNotification(String payload) async {
     print('select notification');
     if (payload != null) {
-        await updateSelection(payload);
-        return notifyListeners();
+      await updateSelection(payload);
+      return notifyListeners();
     }
   }
 
@@ -547,12 +591,6 @@ class ProviderAccount with ChangeNotifier {
   }
 
   Future<bool> subscribeToNotifications() async {
-    bool allowed = await _firebaseMessaging.requestNotificationPermissions();
-    if (allowed != null && !allowed) {
-      print('notification not ready');
-      return Future.value(false);
-    }
-
     final token = await _firebaseMessaging.getToken();
     final Map postData = {
       'platform': 'fcm',
@@ -560,13 +598,19 @@ class ProviderAccount with ChangeNotifier {
       'user': accountEmail,
       'authtoken': _particleAccount.token
     };
-    if (!isUsingNotifications) {
+
+    if (isUsingNotifications) {
+      bool allowed = await _firebaseMessaging.requestNotificationPermissions();
+      if (allowed != null && !allowed) {
+        print('notification not ready');
+        return Future.value(false);
+      }
+      postData['action'] = 'add';
+      postData['device'] = _devices.map((device) => device.id).join(',');
+    } else {
       postData['action'] = 'remove';
       print('notifications not used');
       return true;
-    } else {
-      postData['action'] = 'add';
-      postData['device'] = _devices.map((device) => device.id).join(',');
     }
     // print('data: ${postData.toString()}');
 

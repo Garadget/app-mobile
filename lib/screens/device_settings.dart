@@ -91,7 +91,10 @@ class _ScreenDeviceSettingsState extends State<ScreenDeviceSettings> {
       ]).then((result) {
         return _account.storeDevices();
       }).catchError((error) {
-        _errorMessage = error.toString();
+        final errorString = error.toString();
+        if (errorString != 'timeout' && errorString != 'offline') {
+          _errorMessage = errorString;
+        }
       }).whenComplete(() {
         setState(() {
           _isBusy = false;

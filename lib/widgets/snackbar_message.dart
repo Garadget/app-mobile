@@ -27,7 +27,7 @@ class _ErrorMessage extends StatelessWidget {
       mainAxisSize: MainAxisSize.max,
       children: <Widget>[
         Icon(icon ?? Icons.error),
-        SizedBox(
+        const SizedBox(
           width: 5,
         ),
         Expanded(

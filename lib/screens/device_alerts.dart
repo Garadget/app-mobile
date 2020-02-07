@@ -481,7 +481,12 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                   _mapInit = true;
                   showBusyMessage(context, 'Loading Map');
                 }
-                return _deviceSaveValue('geo/enabled', value);
+                return value
+                    ? _deviceSaveValue('geo/enabled', true)
+                    : _saveGeofence(null, null, null).then((_) {
+                        setState(() {});
+                        return true;
+                      });
               },
             ),
             geoEnabled
@@ -489,25 +494,25 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                     latitude: _device.getValue('geo/latitude'),
                     longitude: _device.getValue('geo/longitude'),
                     radius: _device.getValue('geo/radius'),
-                    onChange: (latitude, longitude, radius) {
+                    onReady: (latitude, longitude, radius) async {
+                      await _scrollController.animateTo(
+                        _scrollController.position.maxScrollExtent,
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeOut,
+                      );
+                    },
+                    onChange: (latitude, longitude, radius) async {
+                      await _saveGeofence(latitude, longitude, radius);
                       if (_mapInit) {
-                        _mapInit = false;
                         Navigator.of(context).pop();
-                        return _scrollController.animateTo(
-                          _scrollController.position.maxScrollExtent,
-                          duration: const Duration(milliseconds: 500),
-                          curve: Curves.easeOut,
-                        );
+                        _mapInit = false;
                       }
-                      _device.setValue('geo/latitude', latitude);
-                      _device.setValue('geo/longitude', longitude);
-                      _device.setValue('geo/radius', radius);
-                      _account.initGeofence();
-                      return _deviceSaveValue('geo/enabled', true);
                     },
                     onError: (error) {
-                      _mapInit = false;
-                      Navigator.of(context).pop();
+                      if (_mapInit) {
+                        Navigator.of(context).pop();
+                        _mapInit = false;
+                      }
                       showErrorDialog(
                           context, 'Location Services Error', error.toString());
                       _deviceSaveValue('geo/enabled', false);
@@ -527,6 +532,21 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
         body: content,
       );
     }
+  }
+
+  Future<bool> _saveGeofence(latitude, longitude, radius) async {
+    final allowed = await localAuthChallageDialog(context, AuthLevel.ACTIONS);
+    if (!allowed) {
+      return false;
+    }
+    bool enabled = latitude != null && longitude != null && radius != null;
+    _device.setValue('geo/latitude', latitude);
+    _device.setValue('geo/longitude', longitude);
+    _device.setValue('geo/radius', radius);
+    _device.setValue('geo/enabled', enabled);
+    _device.saveConfig();
+    await _account.initGeofence();
+    return true;
   }
 
   Widget _getStatusAlert(String status, int allAlerts, int thisAlert) {

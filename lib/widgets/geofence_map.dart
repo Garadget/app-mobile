@@ -14,6 +14,7 @@ class GeofenceMap extends StatefulWidget {
   final double latitude;
   final double longitude;
   final double radius;
+  final Function onReady;
   final Function onChange;
   final Function onError;
 
@@ -21,6 +22,7 @@ class GeofenceMap extends StatefulWidget {
     this.latitude,
     this.longitude,
     this.radius,
+    this.onReady,
     this.onChange,
     this.onError,
   });
@@ -134,6 +136,13 @@ class _GeofenceMapState extends State<GeofenceMap> {
                     ),
                   );
                   _mapReady = true;
+                  if (widget.onReady != null) {
+                    await widget.onReady(
+                      _location.latitude,
+                      _location.longitude,
+                      _radius,
+                    );
+                  }
                 },
                 onCameraIdle: () {
                   setState(() {});
@@ -190,15 +199,18 @@ class _GeofenceMapState extends State<GeofenceMap> {
           location.longitude,
         );
       } on PlatformException catch (error) {
-        throw ('The app was unable to access the location. Make sure the location services are turned on and enabled for this app.\n\nSystem Response: ${error.message}');
+        await widget.onError(error.message);
+        return Future.value(false);
       }
     }
-    _radius = widget.radius ?? 100.00;
+    _radius = widget.radius ?? 200.00;
     final config =
         createLocalImageConfiguration(context, size: const Size(32, 44));
     _icon = await BitmapDescriptor.fromAssetImage(
       config,
-      Platform.isAndroid ? 'assets/images/map-pin@1x.png' : 'assets/images/map-pin@3x.png',
+      Platform.isAndroid
+          ? 'assets/images/map-pin@1x.png'
+          : 'assets/images/map-pin@3x.png',
     );
     _locationReady = true;
     return true;

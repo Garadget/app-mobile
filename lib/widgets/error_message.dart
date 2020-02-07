@@ -15,7 +15,7 @@ class ErrorMessage extends StatelessWidget {
         content: Row(
       children: <Widget>[
         Icon(this.icon ?? Icons.error),
-        SizedBox(
+        const SizedBox(
           width: 5,
         ),
         Text(message),

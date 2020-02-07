@@ -87,7 +87,7 @@ class _OptionsSelectState extends State<OptionsSelect> {
                           color: Theme.of(context).accentColor,
                           size: 24,
                         )
-                      : SizedBox(height: 24),
+                      : const SizedBox(height: 24),
                 ],
               ),
             ),

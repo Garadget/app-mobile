@@ -65,7 +65,7 @@ class WidgetHomeDrawer extends StatelessWidget {
                               ),
                               Expanded(
                                 child: Container(
-                                  child: SizedBox(),
+                                  child: const SizedBox(),
                                 ),
                               ),
                               Divider(),

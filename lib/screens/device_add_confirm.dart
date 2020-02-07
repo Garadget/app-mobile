@@ -71,7 +71,7 @@ class _ScreenDeviceAddConfirmState extends State<ScreenDeviceAddConfirm> {
         }
       });
       // await for confirmation
-      await _confirm(1).timeout(Duration(seconds: 20), onTimeout: () {
+      await _confirm(1).timeout(Duration(seconds: 30), onTimeout: () {
         // continue
 //        _cancelFutures[1] = true;
         if (!_isConfirmed) {

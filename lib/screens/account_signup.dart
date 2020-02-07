@@ -119,13 +119,6 @@ class _ScreenAccountSignupState extends State<ScreenAccountSignup> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Text(
-                      'Create Account',
-                      style: Theme.of(context).textTheme.title,
-                    ),
-                    SizedBox(
-                      height: 12,
-                    ),
                     TextFormField(
                       autocorrect: false,
                       autofocus: false,
@@ -150,7 +143,7 @@ class _ScreenAccountSignupState extends State<ScreenAccountSignup> {
                         _username = value.trim().toLowerCase();
                       },
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                     TextFormField(
@@ -174,7 +167,7 @@ class _ScreenAccountSignupState extends State<ScreenAccountSignup> {
                         _password = value;
                       },
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                     RaisedButton(
@@ -193,6 +186,9 @@ class _ScreenAccountSignupState extends State<ScreenAccountSignup> {
     }
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Create Account'),
+      ),
       body: SafeArea(
         child: body,
       ),

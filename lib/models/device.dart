@@ -203,6 +203,7 @@ class Device {
 
     while (pathList.length > 1) {
       final loc = pathList.removeAt(0);
+      int index = int.tryParse(loc);
       if (loc is String && container is Map) {
         if (container[loc] == null) {
           Map<String, dynamic> newMap = {};
@@ -210,12 +211,12 @@ class Device {
         }
         container = container[loc];
         continue;
-      } else if (loc is int && container is List) {
-        if (container[loc] == null) {
+      } else if (index != null && container is List) {
+        if (container[index] == null) {
           List<dynamic> newList = [];
-          container[loc] = newList;
+          container[index] = newList;
         }
-        container = container[loc];
+        container = container[index];
         continue;
       }
       return false;
@@ -224,7 +225,17 @@ class Device {
     if (value == oldValue) {
       return false;
     }
-    container[pathList[0]] = value;
+    if (value == null) {
+      if (container is Map) {
+        container.remove(pathList[0]);
+      }
+      else if (container is List) {
+        container.removeAt(int.tryParse(pathList[0]));
+      }
+    }
+    else {
+      container[pathList[0]] = value;
+    }
     _updates[path] = true;
     return true;
   }
@@ -633,7 +644,8 @@ class Device {
   }
 
   Map<String, dynamic> get locationData {
-    return getValue(STKEY_GEO) as Map<String, dynamic>;
+    final data = getValue(STKEY_GEO) as Map<String, dynamic>;
+    return data != null && data['enabled'] ? data : null;
   }
 
   set locationData(Map<String, dynamic> location) {

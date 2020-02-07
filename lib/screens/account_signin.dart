@@ -12,8 +12,6 @@ import '../widgets/bottom_bar_button.dart';
 import '../widgets/form_logo.dart';
 import './home.dart';
 
-// TODO: add accessibility labels
-
 class ScreenAccountSignin extends StatefulWidget {
   static const routeName = "/account/signin";
 
@@ -127,13 +125,6 @@ class _ScreenAccountSigninState extends State<ScreenAccountSignin> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    Text(
-                      'Account Login',
-                      style: Theme.of(context).textTheme.title,
-                    ),
-                    SizedBox(
-                      height: 12,
-                    ),
                     TextFormField(
                       autocorrect: false,
                       autofocus: false,
@@ -158,7 +149,7 @@ class _ScreenAccountSigninState extends State<ScreenAccountSignin> {
                         _username = value.trim().toLowerCase();
                       },
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                     TextFormField(
@@ -181,7 +172,7 @@ class _ScreenAccountSigninState extends State<ScreenAccountSignin> {
                         _password = value;
                       },
                     ),
-                    SizedBox(
+                    const SizedBox(
                       height: 10,
                     ),
                     RaisedButton(
@@ -200,6 +191,9 @@ class _ScreenAccountSigninState extends State<ScreenAccountSignin> {
     }
 
     return Scaffold(
+      appBar: AppBar(
+        title: const Text('Account Login'),
+      ),
       body: SafeArea(child: body),
       bottomNavigationBar: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

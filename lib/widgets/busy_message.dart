@@ -50,8 +50,8 @@ class BusyMessage extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.center,
                   children: <Widget>[
-                    CircularProgressIndicator(),
-                    SizedBox(height: 30),
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 30),
                     Text(
                       message,
                       style: Theme.of(context).textTheme.body2,
