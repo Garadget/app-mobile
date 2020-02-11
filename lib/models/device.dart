@@ -1,15 +1,18 @@
 import 'dart:async';
 import "particle.dart" as particle;
+import 'package:geolocator/geolocator.dart';
 
 enum DoorStatus { OPEN, CLOSED, OPENING, CLOSING, STOPPED, UNKNOWN }
 enum DoorCommands { OPEN, CLOSE, STOP, NONE }
 enum ConnectionStatus { ONLINE, TIMEOUT, OFFLINE, ERROR, LOADING, UNKNOWN }
+enum GeofenceStatus { DISABLED, ENTER, EXIT, IN, OUT }
 
 class Device {
   static const STKEY_CONFIG = 'config';
   static const STKEY_NET = 'net';
   static const STKEY_ALERTS = 'alerts';
   static const STKEY_GEO = 'geo';
+  static const GEO_RADIUSDIFF = 0.8; // enter geofence ratio to exit geofence
 
   static String intToString(int value) {
     return value.toString();
@@ -164,6 +167,7 @@ class Device {
   bool _pendingStatusUpdate = false;
   bool _pendingCommand = false;
   int _skipStatusUpdates = 0;
+  GeofenceStatus _geoStatus = GeofenceStatus.DISABLED;
 
   Device(this.particleDevice)
       : _connectionStatus = particleDevice.connected
@@ -228,12 +232,10 @@ class Device {
     if (value == null) {
       if (container is Map) {
         container.remove(pathList[0]);
-      }
-      else if (container is List) {
+      } else if (container is List) {
         container.removeAt(int.tryParse(pathList[0]));
       }
-    }
-    else {
+    } else {
       container[pathList[0]] = value;
     }
     _updates[path] = true;
@@ -337,12 +339,12 @@ class Device {
       if (statusChanged) {
         _doorStatusTime = parseStatusTime(statusMap['time']);
       }
-      var numValue = int.tryParse(statusMap['base']);
+      var numValue = int.tryParse(statusMap['base'] ?? '');
       if (numValue != null) {
         status['ambientLight'] = ((1 - (numValue / 4095)) * 100).round();
       }
-      status['reflection'] = int.tryParse(statusMap['sensor']);
-      status['wifiSignal'] = int.tryParse(statusMap['signal']);
+      status['reflection'] = int.tryParse(statusMap['sensor'] ?? '');
+      status['wifiSignal'] = int.tryParse(statusMap['signal'] ?? '');
       setValue('status', status);
     } finally {
       _pendingStatusUpdate = false;
@@ -441,6 +443,46 @@ class Device {
 
   void _onSuccess() {
     _connectionStatus = ConnectionStatus.ONLINE;
+  }
+
+  Future<GeofenceStatus> getGeoStatus(double latitude, double longitude) async {
+    if (!isUsingLocation) {
+      return Future.value(GeofenceStatus.DISABLED);
+    }
+    final double doorLat = getValue('geo/latitude');
+    final double doorLon =  getValue('geo/longitude');
+    double radius = getValue('geo/radius');
+
+    if (doorLat == null || doorLon == null || radius == null) {
+      return _geoStatus;
+    }
+
+    double distance = await Geolocator().distanceBetween(
+      latitude,
+      longitude,
+      getValue('geo/latitude'),
+      getValue('geo/longitude'),
+    );
+    GeofenceStatus newStatus;
+    
+    final outside = distance > radius;
+    final inside = !outside && distance <= radius * GEO_RADIUSDIFF;
+    
+    switch (_geoStatus) {
+      case GeofenceStatus.ENTER:
+      case GeofenceStatus.IN:
+        newStatus = outside ? GeofenceStatus.EXIT : GeofenceStatus.IN;
+        break;
+      case GeofenceStatus.EXIT:
+      case GeofenceStatus.OUT:
+        newStatus = inside ? GeofenceStatus.ENTER : GeofenceStatus.OUT;
+        break;
+      case GeofenceStatus.DISABLED:
+        newStatus = outside ? GeofenceStatus.OUT : GeofenceStatus.IN;
+        break;
+    }
+    _geoStatus = newStatus;
+    return _geoStatus;
   }
 
   String get id {

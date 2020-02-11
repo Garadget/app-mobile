@@ -49,7 +49,7 @@ android {
         versionName flutterVersionName
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
         manifestPlaceholders = [
-            google_maps_key: keystoreProperties['googleMapsKey']
+            google_maps_key: keystoreProperties['googleMapsKeyAndroid']
         ]
     }
 

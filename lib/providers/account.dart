@@ -1,7 +1,5 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:isolate';
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,7 +7,6 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
-import 'package:geofencing/geofencing.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../models/device.dart';
@@ -47,6 +44,8 @@ class ProviderAccount with ChangeNotifier {
   final _providerDeviceInfo = ProviderDeviceInfo();
   final _firebaseMessaging = FirebaseMessaging();
   final _localNotifications = FlutterLocalNotificationsPlugin();
+  static StreamSubscription _locationUpdates;
+
   List<Device> _devices = [];
   SharedPreferences _storage;
   Timer _refreshTimer;
@@ -86,7 +85,14 @@ class ProviderAccount with ChangeNotifier {
   }
 
   Future<void> initGeofence() async {
+    print('init geofence');
     if (!isUsingLocation) {
+      if (_locationUpdates != null) {
+        print('turning off location');
+        await _locationUpdates?.cancel();
+        _locationUpdates = null;
+//        await GeofencingManager.demoteToBackground();
+      }
       return;
     }
 
@@ -101,97 +107,60 @@ class ProviderAccount with ChangeNotifier {
       return;
     }
 
-    final List<GeofenceEvent> triggers = <GeofenceEvent>[
-      // GeofenceEvent.enter,
-      // GeofenceEvent.dwell,
-      GeofenceEvent.exit
-    ];
-    final AndroidGeofencingSettings androidSettings = AndroidGeofencingSettings(
-      initialTrigger: triggers,
-      loiteringDelay: 1000 * 60,
-    );
-
     try {
       if (!_isGeofenceReady) {
-        ReceivePort port = ReceivePort();
-        IsolateNameServer.registerPortWithName(port.sendPort, PORT_GEOFENCE);
-        port.listen((dynamic data) {
-          print('Geo Event: $data');
-          final List<dynamic> deviceIds = json.decode(data)['ids'];
-          final List<String> statusList = [];
-          String firstId;
-
-          Future.wait(deviceIds.map((deviceId) {
-            final Device device = getDeviceById(deviceId as String);
-            return device.loadStatus().then((status) {
-              if (!isAppActive &&
-                  device.doorStatus != DoorStatus.CLOSED &&
-                  device.doorStatus != DoorStatus.CLOSING) {
-                statusList.add(device.name + ' is ' + device.doorStatusString);
-                if (firstId == null) {
-                  firstId = deviceId;
-                }
-              }
-            });
-          }).toList())
-              .then((_) {
-            if (statusList.isEmpty) {
-              return;
-            }
-            String statusString = statusList.removeLast();
-            if (statusList.isNotEmpty) {
-              statusString = statusList.join(', ') + ' and ' + statusString;
-            }
-            print('notifying');
-            localNotificationShow(
-              'Garadget Departure Alert',
-              'You are leaving the area while $statusString',
-              payload: firstId,
-            );
-          }).catchError((error) {
-            localNotificationShow(
-              'Garadget Departure Alert',
-              'You are leaving the area, but the status of the door is unknown due to connection issue',
-              payload: deviceIds[0],
-            );
-          });
-        });
-        await GeofencingManager.initialize();
+        _locationUpdates =
+            Geolocator().getPositionStream().listen(_handleLocationUpdate);
         _isGeofenceReady = true;
       }
-
-      await Future.wait(_devices.map((device) {
-        if (device.locationData != null) {
-          return GeofencingManager.registerGeofence(
-            GeofenceRegion(
-              device.id,
-              device.locationData['latitude'],
-              device.locationData['longitude'],
-              device.locationData['radius'],
-              triggers,
-              androidSettings: androidSettings,
-            ),
-            _onGeofenceEvent,
-          );
-        } else {
-          return GeofencingManager.removeGeofenceById(device.id);
-        }
-      }).toList());
     } catch (error) {
       _initErrors.add('Error Initializing Geofencing: ${error.toString()}');
     }
   }
 
-  static void _onGeofenceEvent(
-    List<String> deviceIds,
-    Location location,
-    GeofenceEvent event,
-  ) {
-    final port = IsolateNameServer.lookupPortByName(PORT_GEOFENCE);
-    print('geofence event ${event.toString()} for: ${deviceIds.toString()}');
-    port?.send(json.encode({
-      'ids': deviceIds,
-    }));
+  Future<void> _handleLocationUpdate(Position location) {
+//    print('location update: ${location.latitude}, ${location.longitude}');
+    final List<String> statusList = [];
+    String firstId;
+    return Future.wait(_devices.map((device) async {
+      final geoStatus = await device.getGeoStatus(
+        location.latitude,
+        location.longitude,
+      );
+//      print('geo status: $geoStatus');
+      if (geoStatus != GeofenceStatus.EXIT || isAppActive) {
+        return Future.value();
+      }
+      try {
+        await device.loadStatus();
+        print('exited, door status: ${device.doorStatus}');
+        if (device.doorStatus != DoorStatus.CLOSED &&
+            device.doorStatus != DoorStatus.CLOSING) {
+          statusList.add(device.name + ' remains ' + device.doorStatusString);
+        }
+      } catch (error) {
+        statusList.add(device.name + ' did not responding');
+      } finally {
+        if (firstId == null) {
+          firstId = device.id;
+        }
+      }
+    }).toList())
+        .then((_) {
+      if (statusList.isEmpty) {
+        return;
+      }
+      String statusString = statusList.removeLast();
+      if (statusList.isNotEmpty) {
+        statusString = statusList.join(', ') + ' and ' + statusString;
+      }
+      print('notifying');
+      localNotificationShow(
+        'Departure Alert',
+        '$statusString',
+        payload: firstId,
+      );
+    });
   }
 
   void _initNotifications() {

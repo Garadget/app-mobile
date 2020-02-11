@@ -16,6 +16,7 @@ class GeofenceMap extends StatefulWidget {
   final double radius;
   final Function onReady;
   final Function onChange;
+  final Function onIdle;
   final Function onError;
 
   GeofenceMap({
@@ -24,6 +25,7 @@ class GeofenceMap extends StatefulWidget {
     this.radius,
     this.onReady,
     this.onChange,
+    this.onIdle,
     this.onError,
   });
 
@@ -33,12 +35,20 @@ class GeofenceMap extends StatefulWidget {
 
 class _GeofenceMapState extends State<GeofenceMap> {
   bool _locationReady = false;
-  bool _mapReady = false;
+  bool _rescaleReady = false;
+  bool _mapTimedOut = false;
   double _zoom;
   LatLng _location;
   double _radius;
   BitmapDescriptor _icon;
   GoogleMapController _mapController;
+
+  @override
+  void setState(function) {
+    if (mounted) {
+      super.setState(function);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -83,23 +93,33 @@ class _GeofenceMapState extends State<GeofenceMap> {
                 circles: _circles,
                 markers: _markers,
                 mapToolbarEnabled: false,
+                initialCameraPosition: CameraPosition(
+                  target: _location,
+                  zoom: 15.0,
+                ),
+                onMapCreated: (controller) async {
+                  _rescaleReady = false;
+                  _mapTimedOut = false;
+                  Future.delayed(Duration(seconds: 15), () {
+                    if (!_rescaleReady) {
+                      _mapTimedOut = true;
+                      return widget.onError('Map Timed Out');
+                    }
+                  });
+
+                  _mapController = controller;
+                  // want for map to finish initializing
+                  await _mapController.getVisibleRegion();
+                  await _rescaleMap();
+                  _callback(widget.onReady);
+                },
                 onCameraMove: (loc) async {
-                  if (!_mapReady) {
+                  if (!_rescaleReady) {
                     return;
                   }
-                  if (loc.zoom != _zoom) {
-                    _zoom = loc.zoom;
-                    LatLngBounds mapBounds =
-                        await _mapController.getVisibleRegion();
-                    double mapWidth = await Geolocator().distanceBetween(
-                      mapBounds.northeast.latitude,
-                      mapBounds.northeast.longitude,
-                      mapBounds.northeast.latitude,
-                      mapBounds.southwest.longitude,
-                    );
-                    _radius = mapWidth * MAP2RADIUS;
-                  }
+                  await _rescaleGeofence(loc);
                   _location = loc.target;
+                  await _callback(widget.onChange);
                   setState(() {});
                 },
                 onTap: (val) async {
@@ -107,56 +127,14 @@ class _GeofenceMapState extends State<GeofenceMap> {
                       .animateCamera(CameraUpdate.newLatLng(val));
                   _location = val;
                 },
-                onMapCreated: (controller) async {
-                  _mapController = controller;
-                  // calculate boudaries from center and radius plus padding
-                  var center = latlong.LatLng(
-                    _location.latitude,
-                    _location.longitude,
-                  );
-                  final distance = const latlong.Distance();
-                  final center2corner = _radius / MAP2RADIUS * 0.707106781;
-                  var northeast = distance.offset(center, center2corner, 45);
-                  var southwest = distance.offset(center, center2corner, 225);
-                  // want for map to finish initializing
-                  await _mapController.getVisibleRegion();
-                  await _mapController.animateCamera(
-                    CameraUpdate.newLatLngBounds(
-                      LatLngBounds(
-                        northeast: LatLng(
-                          northeast.latitude,
-                          northeast.longitude,
-                        ),
-                        southwest: LatLng(
-                          southwest.latitude,
-                          southwest.longitude,
-                        ),
-                      ),
-                      0,
-                    ),
-                  );
-                  _mapReady = true;
-                  if (widget.onReady != null) {
-                    await widget.onReady(
-                      _location.latitude,
-                      _location.longitude,
-                      _radius,
-                    );
+                onCameraIdle: () async {
+                  if (_mapTimedOut) {
+                    return;
                   }
-                },
-                onCameraIdle: () {
+                  _rescaleReady = true;
                   setState(() {});
-                  if (widget.onChange != null) {
-                    return widget.onChange(
-                        _location.latitude, _location.longitude, _radius);
-                  } else {
-                    return Future.value();
-                  }
+                  _callback(widget.onIdle);
                 },
-                initialCameraPosition: CameraPosition(
-                  target: _location,
-                  zoom: 15.0,
-                ),
               ),
             );
           });
@@ -182,6 +160,60 @@ class _GeofenceMapState extends State<GeofenceMap> {
     );
   }
 
+  Future<void> _rescaleMap() {
+    // calculate boudaries from center and radius plus padding
+    var center = latlong.LatLng(
+      _location.latitude,
+      _location.longitude,
+    );
+
+    final distance = const latlong.Distance();
+    final center2corner = _radius / MAP2RADIUS * 0.707106781;
+    var northeast = distance.offset(center, center2corner, 45);
+    var southwest = distance.offset(center, center2corner, 225);
+
+    return _mapController.animateCamera(
+      CameraUpdate.newLatLngBounds(
+        LatLngBounds(
+          northeast: LatLng(
+            northeast.latitude,
+            northeast.longitude,
+          ),
+          southwest: LatLng(
+            southwest.latitude,
+            southwest.longitude,
+          ),
+        ),
+        0,
+      ),
+    );
+  }
+
+  Future<void> _rescaleGeofence(CameraPosition loc) async {
+    if (loc.zoom != _zoom) {
+      _zoom = loc.zoom;
+      LatLngBounds mapBounds = await _mapController.getVisibleRegion();
+      double mapWidth = await Geolocator().distanceBetween(
+        mapBounds.northeast.latitude,
+        mapBounds.northeast.longitude,
+        mapBounds.northeast.latitude,
+        mapBounds.southwest.longitude,
+      );
+      _radius = mapWidth * MAP2RADIUS;
+    }
+  }
+
+  Future<void> _callback(Function callback) {
+    if (callback != null) {
+      return callback(
+        _location.latitude,
+        _location.longitude,
+        _radius,
+      );
+    }
+    return Future.value();
+  }
+
   Future<bool> _initLocation() async {
     if (widget.latitude != null && widget.longitude != null) {
       _location = LatLng(
@@ -203,6 +235,7 @@ class _GeofenceMapState extends State<GeofenceMap> {
         return Future.value(false);
       }
     }
+    // print('location: ${_location.latitude}/${_location.longitude}');
     _radius = widget.radius ?? 200.00;
     final config =
         createLocalImageConfiguration(context, size: const Size(32, 44));

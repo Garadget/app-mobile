@@ -502,11 +502,7 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                       );
                     },
                     onChange: (latitude, longitude, radius) async {
-                      await _saveGeofence(latitude, longitude, radius);
-                      if (_mapInit) {
-                        Navigator.of(context).pop();
-                        _mapInit = false;
-                      }
+//                      print('map update: $latitude/$longitude/$radius');
                     },
                     onError: (error) {
                       if (_mapInit) {
@@ -518,6 +514,13 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                       _deviceSaveValue('geo/enabled', false);
                       setState(() {});
                     },
+                    onIdle: (latitude, longitude, radius) async {
+                      await _saveGeofence(latitude, longitude, radius);
+                      if (_mapInit) {
+                        Navigator.of(context).pop();
+                        _mapInit = false;
+                      }
+                    }
                   )
                 : SizedBox.shrink(),
           ],
@@ -544,8 +547,7 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
     _device.setValue('geo/longitude', longitude);
     _device.setValue('geo/radius', radius);
     _device.setValue('geo/enabled', enabled);
-    _device.saveConfig();
-    await _account.initGeofence();
+    _account.storeDevices();
     return true;
   }
 
