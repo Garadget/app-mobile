@@ -23,17 +23,16 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
-	<string>Why is my app authenticating using face id?</string>
+	<string>Face detection is used for optional in-app authentication.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>This app needs access to location when open and in the background.</string>
+	<string>This app needs access to location when open and in the background for Departure Alerts.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
-	<string>This app needs access to location when in the background.</string>
+	<string>This app needs access to location when in the background for Departure Alerts.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>This app needs access to location when open.</string>
+	<string>This app needs access to location when open for Departure Alert configuration.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>location</string>
-		<string>processing</string>
 		<string>remote-notification</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
@@ -43,8 +42,6 @@
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
 		<string>location-services</string>
-		<string>gps</string>
-		<string>armv7</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>

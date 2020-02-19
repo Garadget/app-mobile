@@ -109,8 +109,7 @@ class _GeofenceMapState extends State<GeofenceMap> {
 
                   _mapController = controller;
                   // want for map to finish initializing
-                  await _mapController.getVisibleRegion();
-                  await _rescaleMap();
+//                  await _mapController.getVisibleRegion();
                   _callback(widget.onReady);
                 },
                 onCameraMove: (loc) async {
@@ -131,8 +130,11 @@ class _GeofenceMapState extends State<GeofenceMap> {
                   if (_mapTimedOut) {
                     return;
                   }
-                  _rescaleReady = true;
-                  setState(() {});
+                  if (!_rescaleReady) {
+                    await _rescaleMap();
+                    _rescaleReady = true;
+                    setState(() {});
+                  }
                   _callback(widget.onIdle);
                 },
               ),
@@ -160,7 +162,8 @@ class _GeofenceMapState extends State<GeofenceMap> {
     );
   }
 
-  Future<void> _rescaleMap() {
+  Future<void> _rescaleMap() async {
+    print('rescaling map');
     // calculate boudaries from center and radius plus padding
     var center = latlong.LatLng(
       _location.latitude,
@@ -169,10 +172,11 @@ class _GeofenceMapState extends State<GeofenceMap> {
 
     final distance = const latlong.Distance();
     final center2corner = _radius / MAP2RADIUS * 0.707106781;
+
     var northeast = distance.offset(center, center2corner, 45);
     var southwest = distance.offset(center, center2corner, 225);
 
-    return _mapController.animateCamera(
+    await _mapController.animateCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
           northeast: LatLng(

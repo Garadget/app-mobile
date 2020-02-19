@@ -7,8 +7,11 @@ import 'package:flutter/services.dart';
 import '../providers/account.dart';
 import '../widgets/busy_message.dart';
 import '../widgets/snackbar_message.dart';
+import '../widgets/info_box.dart';
 import '../misc/input_decoration.dart';
 import './account_signin.dart';
+
+const MAX_ATTEMPTS = 3;
 
 class ScreenLocalAuth extends StatefulWidget {
   static const routeName = "/account/auth";
@@ -22,6 +25,7 @@ class _ScreenLocalAuthState extends State<ScreenLocalAuth> {
   bool _isFirstRun = true;
   bool _isPinObscured = true;
 
+  bool _bioSupported = false;
   AuthLevel _authLevel;
   AuthMethod _authMethod;
   String _pinCode;
@@ -41,12 +45,17 @@ class _ScreenLocalAuthState extends State<ScreenLocalAuth> {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-      future: localAuth.getAvailableBiometrics(),
+      future: localAuth.canCheckBiometrics.then((supported) {
+        _bioSupported = supported;
+        print('supported: $supported');
+        return /*supported ? */localAuth.getAvailableBiometrics()/* : [] as List<BiometricType>*/;
+      }),
       builder: (ctx, snapshot) {
         if (!snapshot.hasData) {
           return BusyScreen('Loading...');
         }
         List<BiometricType> availableBiometrics = snapshot.data;
+        bool bioRequest = _bioSupported && availableBiometrics.length == 0;
         if (_authLevel == null && _account.authLevel != null) {
           _authLevel = _account.authLevel;
         }
@@ -166,6 +175,10 @@ class _ScreenLocalAuthState extends State<ScreenLocalAuth> {
             ),
           );
         }
+          if (bioRequest) {
+            widgetList.add(const SizedBox(height: 10));
+            widgetList.add(InfoBox(Text('Enable Biometric Authentication for additional options')));
+          }
 
         return Scaffold(
           appBar: AppBar(
@@ -281,11 +294,13 @@ Future<bool> localAuthChallageDialog(
   BuildContext context,
   AuthLevel authLevel,
 ) async {
+  print('challenge dialog');
+
   final _account = Provider.of<ProviderAccount>(context, listen: false);
-  if (_account.isLocalAuthNeeded(authLevel) == null) {
+  if (_account.isLocalAuthNeeded(authLevel) == null || _account.isInLocalAuth) {
     return true;
   }
-
+  _account.isInLocalAuth = true;
   try {
     bool successful = false;
     if (_account.authMethod == AuthMethod.FACEID ||
@@ -315,6 +330,7 @@ Future<bool> localAuthChallageDialog(
     if (_account.authLevel == AuthLevel.ALWAYS) {
       Navigator.of(context).popUntil((route) => route.isFirst);
       Navigator.of(context).pushReplacementNamed(ScreenAccountSignin.routeName);
+      _account.isInLocalAuth = false;
     }
     else if (error is PlatformException) {
       showSnackbarMessage(context, error.message, icon: Icons.fingerprint);
@@ -323,8 +339,6 @@ Future<bool> localAuthChallageDialog(
   }
   return true;
 }
-
-const MAX_ATTEMPTS = 3;
 
 class ScreenLocalAuthChallenge extends StatefulWidget {
   final Function onComplete;

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-// TODO: use intl for localization
 import './providers/account.dart';
 import './providers/device_status.dart';
 import './providers/device_info.dart';
@@ -29,9 +28,9 @@ class App extends StatelessWidget {
 
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(builder: (_) => providerAccount),
-        ChangeNotifierProvider(builder: (_) => providerDeviceStatus),
-        ChangeNotifierProvider(builder: (_) => providerDeviceInfo),
+        ChangeNotifierProvider(create: (_) => providerAccount),
+        ChangeNotifierProvider(create: (_) => providerDeviceStatus),
+        ChangeNotifierProvider(create: (_) => providerDeviceInfo),
       ],
       child: MaterialApp(
         title: 'Garadget',
@@ -50,6 +49,7 @@ class App extends StatelessWidget {
             900: Color(0xff00310b)
           }),
           accentColor: Color.fromRGBO(0xf4, 0x68, 0x09, 1),
+          fontFamily: 'Roboto',
 //        accentColor: Colors.white,
           textTheme: TextTheme(
             headline: TextStyle(

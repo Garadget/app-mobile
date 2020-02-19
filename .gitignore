@@ -15,14 +15,14 @@
 key.properties
 google-services.json
 secrets.dart
-secrets.xconfig
+AppDelegate.swift
 
 # IntelliJ related
 *.iml
 *.ipr
 *.iws
 .idea/
-
+lib/packages/
 # The .vscode folder contains launch configuration and tasks you configure in
 # VS Code which you may wish to be included in version control, so this line
 # is commented out by default.
@@ -31,7 +31,7 @@ secrets.xconfig
 # Flutter/Dart/Pub related
 **/doc/api/
 .dart_tool/
-.flutter-plugins
+.flutter-plugins*
 .packages
 .pub-cache/
 .pub/
@@ -79,4 +79,4 @@ secrets.xconfig
 !**/ios/**/default.pbxuser
 !**/ios/**/default.perspectivev3
 !/packages/flutter_tools/test/data/dart_dependencies_test/**/.packages
-ios/Runner/secrets.xconfig
+.flutter-plugins-dependencies

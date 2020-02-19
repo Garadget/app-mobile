@@ -8,6 +8,7 @@ import './account_signin.dart';
 import '../widgets/linked_text.dart';
 import '../widgets/busy_message.dart';
 import '../widgets/error_message.dart';
+import '../widgets/info_box.dart';
 
 const DEVICE_NAME_PREFIX = 'Garage';
 
@@ -129,31 +130,19 @@ class _ScreenDeviceAddConfirmState extends State<ScreenDeviceAddConfirm> {
     Widget onlineStatus;
     Widget confirmStatus = SizedBox.shrink();
     Widget actionBlock = SizedBox.shrink();
-    Widget troubleShooting = Padding(
-      padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 20),
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border.all(
-            width: 1.0,
-            color: const Color(0xFFFF0000),
-          ),
-          color: const Color(0xFFFFE0E0),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const Text('Please try again, making sure you enter the correct WiFi password.\n\nIf the issue persists, refer to these support resources:'),
-            LinkedText('Troubleshooting Guide', 'https://www.garadget.com/fixme'),
-            LinkedText('Community Board', 'https://community.garadget.com/'),
-            LinkedText('Technical Support', 'https://www.garadget.com/contact-us'),
-          ],
-        ),
+    Widget troubleShooting = InfoBox(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+              'Please try again, making sure you enter the correct WiFi password.\n\nIf the issue persists, refer to these support resources:'),
+          LinkedText('Troubleshooting Guide', 'https://www.garadget.com/fixme'),
+          LinkedText('Community Board', 'https://community.garadget.com/'),
+          LinkedText(
+              'Technical Support', 'https://www.garadget.com/contact-us'),
+        ],
       ),
-
-      //Text('Please try submitting WiFi credentials again, while double checking the password.\nIf the issue persists, please visit the troubleshooting guide or contact our tecnical support.'),
     );
-
     if (_isPhoneOnline) {
       // phone reconnected
       onlineStatus = ListTile(
@@ -371,10 +360,9 @@ class _ScreenDeviceAddConfirmState extends State<ScreenDeviceAddConfirm> {
       Navigator.of(context).pop(); // to configure
       Navigator.of(context).pop(); // to intro
       Navigator.of(context).pop(_deviceId); // to home
-    }
-    catch(error) {
+    } catch (error) {
       showErrorDialog(context, 'Error Renaming',
-        'There was an error renaming your Garadget.\n\nDetails: ${error.toString()}');
+          'There was an error renaming your Garadget.\n\nDetails: ${error.toString()}');
     }
   }
 }

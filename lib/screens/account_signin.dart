@@ -181,6 +181,34 @@ class _ScreenAccountSigninState extends State<ScreenAccountSignin> {
                       ),
                       onPressed: _signin,
                     ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        FlatButton(
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          child: Text('Don\'t have Account?'),
+                          onPressed: () {
+                            Navigator.of(context).pushReplacementNamed(
+                                ScreenAccountSignup.routeName);
+                          },
+                        ),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        FlatButton(
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          child: Text(
+                            'Forgot Password?',
+                          ),
+                          onPressed: () {
+                            Navigator.of(context).pushReplacementNamed(
+                                ScreenAccountReset.routeName);
+                          },
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -195,27 +223,6 @@ class _ScreenAccountSigninState extends State<ScreenAccountSignin> {
         title: const Text('Account Login'),
       ),
       body: SafeArea(child: body),
-      bottomNavigationBar: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          SizedBox.shrink(),
-          BottomBarButton(
-            'Create Account',
-            () {
-              Navigator.of(context)
-                  .pushReplacementNamed(ScreenAccountSignup.routeName);
-            },
-          ),
-          BottomBarButton(
-            'Reset Password',
-            () {
-              Navigator.of(context)
-                  .pushReplacementNamed(ScreenAccountReset.routeName);
-            },
-          ),
-        ],
-      ),
     );
   }
 }

@@ -193,6 +193,32 @@ class _ScreenAccountResetState extends State<ScreenAccountReset> {
                       ),
                       onPressed: _reset,
                     ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        FlatButton(
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          child: Text('Try Logging In'),
+                          onPressed: () {
+                            Navigator.of(context).pushReplacementNamed(
+                                ScreenAccountSignin.routeName);
+                          },
+                        ),
+                        SizedBox(
+                          width: 10,
+                        ),
+                        FlatButton(
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          child: Text('Create New Account'),
+                          onPressed: () {
+                            Navigator.of(context).pushReplacementNamed(
+                                ScreenAccountSignup.routeName);
+                          },
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -208,27 +234,6 @@ class _ScreenAccountResetState extends State<ScreenAccountReset> {
       ),
       body: SafeArea(
         child: body,
-      ),
-      bottomNavigationBar: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          SizedBox.shrink(),
-          BottomBarButton(
-            'Existing Account',
-            () {
-              Navigator.of(context)
-                  .pushReplacementNamed(ScreenAccountSignin.routeName);
-            },
-          ),
-          BottomBarButton(
-            'Create Account',
-            () {
-              Navigator.of(context)
-                  .pushReplacementNamed(ScreenAccountSignup.routeName);
-            },
-          ),
-        ],
       ),
     );
   }

@@ -25,6 +25,7 @@ const STKEY_PINCODE = 'pinCode';
 const PORT_GEOFENCE = 'garadget-geofence';
 const URL_PASSWORDRESET = 'https://garadget.com/my/json/password-reset.php';
 const URL_PUSHSUBSCRIBE = 'https://www.garadget.com/my/json/pn-signup.php';
+const AUTH_TIMEOUT = 2000; // milliseconds between local auth challenges
 
 enum AuthLevel {
   ALWAYS,
@@ -56,7 +57,9 @@ class ProviderAccount with ChangeNotifier {
   bool _isNotificationReady = false;
   List<String> _initErrors = [];
   List<String> _updateErrors = [];
+  bool isInLocalAuth = false;
   bool _localAuth = true; // request local re-auth
+  int authTime;
   bool isAppActive = true;
 
   Future<bool> init() async {
@@ -91,6 +94,7 @@ class ProviderAccount with ChangeNotifier {
         print('turning off location');
         await _locationUpdates?.cancel();
         _locationUpdates = null;
+        _isGeofenceReady = false;
 //        await GeofencingManager.demoteToBackground();
       }
       return;
@@ -103,7 +107,7 @@ class ProviderAccount with ChangeNotifier {
       );
     } on PlatformException catch (error) {
       _initErrors.add(
-          'The app was unable to access the location used for departure alert.\nMake sure the location services are turned on and enabled for this app.\n\nSystem Response: ${error.message}');
+          'The app was unable to access the location used for departure alert.\nSet Location access for Garadget to \'Always\'.\n\nSystem Response: ${error.message}');
       return;
     }
 
@@ -127,7 +131,7 @@ class ProviderAccount with ChangeNotifier {
         location.latitude,
         location.longitude,
       );
-//      print('geo status: $geoStatus');
+//z      print('geo status: $geoStatus');
       if (geoStatus != GeofenceStatus.EXIT || isAppActive) {
         return Future.value();
       }
@@ -334,6 +338,7 @@ class ProviderAccount with ChangeNotifier {
       _storage.remove(STKEY_SELECTEDID);
       clearDeviceCache();
       _storage.remove(STKEY_AUTHTOKEN);
+      stopTimer();
       return result;
     });
   }
@@ -460,7 +465,7 @@ class ProviderAccount with ChangeNotifier {
             }
           } catch (exception) {
             final error = exception.toString();
-            if (error != 'timeout' && error != 'offline') {
+            if (error != 'timeout' && error != 'offline' && _refreshTimer.isActive) {
               // flag account level request errors
               updateErrors.add('${device.name}:  $error');
             }
@@ -539,7 +544,6 @@ class ProviderAccount with ChangeNotifier {
     _providerDeviceStatus.update();
     if (commandString != null) {
       device.commandRemote(commandString).then((result) {
-        // TODO: handle command failures (SnackBar message or sound?)
         _providerDeviceStatus.update();
       });
     }
@@ -703,10 +707,15 @@ class ProviderAccount with ChangeNotifier {
   }
 
   void requireLocalAuth() {
+    if (authTime != null && (DateTime.now().millisecondsSinceEpoch - authTime) < AUTH_TIMEOUT) {
+      return;
+    }
     _localAuth = true;
   }
 
   void fulfillLocalAuth() {
+    authTime = DateTime.now().millisecondsSinceEpoch;
+    isInLocalAuth = false;
     _localAuth = false;
   }
 
@@ -761,7 +770,6 @@ class ProviderAccount with ChangeNotifier {
   }
 
   List<Device> get devices {
-    // TODO: implement custom sort order
     return [..._devices];
   }
 }

@@ -172,9 +172,23 @@ class _ScreenAccountSignupState extends State<ScreenAccountSignup> {
                     ),
                     RaisedButton(
                       child: Text(
-                        'Register',
+                        'Create',
                       ),
                       onPressed: _signup,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        FlatButton(
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          child: Text('Already Have Account?'),
+                          onPressed: () {
+                            Navigator.of(context).pushReplacementNamed(
+                                ScreenAccountSignin.routeName);
+                          },
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -191,20 +205,6 @@ class _ScreenAccountSignupState extends State<ScreenAccountSignup> {
       ),
       body: SafeArea(
         child: body,
-      ),
-      bottomNavigationBar: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          SizedBox.shrink(),
-          BottomBarButton(
-            'Existing Account',
-            () {
-              Navigator.of(context)
-                  .pushReplacementNamed(ScreenAccountSignin.routeName);
-            },
-          ),
-        ],
       ),
     );
   }

@@ -476,17 +476,18 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
             SettingsToggle(
               'Enable',
               geoEnabled,
-              (value) {
+              (value) async {
                 if (value && !_mapInit) {
                   _mapInit = true;
                   showBusyMessage(context, 'Loading Map');
                 }
-                return value
-                    ? _deviceSaveValue('geo/enabled', true)
-                    : _saveGeofence(null, null, null).then((_) {
-                        setState(() {});
-                        return true;
-                      });
+                if (value) {
+                  await _deviceSaveValue('geo/enabled', true);
+                } else {
+                  await _saveGeofence(null, null, null);
+                  setState(() {});
+                }
+                _account.initGeofence();
               },
             ),
             geoEnabled
@@ -520,8 +521,7 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                         Navigator.of(context).pop();
                         _mapInit = false;
                       }
-                    }
-                  )
+                    })
                 : SizedBox.shrink(),
           ],
         );
