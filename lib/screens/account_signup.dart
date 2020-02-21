@@ -7,8 +7,10 @@ import '../providers/account.dart';
 import '../misc/input_decoration.dart';
 import '../widgets/busy_message.dart';
 import '../widgets/network_error.dart';
-import '../widgets/bottom_bar_button.dart';
 import '../widgets/form_logo.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+const LINK_BUY = 'https://www.garadget.com/product/garadget/';
 
 class ScreenAccountSignup extends StatefulWidget {
   static const routeName = "/account/signup";
@@ -186,6 +188,20 @@ class _ScreenAccountSignupState extends State<ScreenAccountSignup> {
                           onPressed: () {
                             Navigator.of(context).pushReplacementNamed(
                                 ScreenAccountSignin.routeName);
+                          },
+                        ),
+                        FlatButton(
+                          materialTapTargetSize:
+                              MaterialTapTargetSize.shrinkWrap,
+                          child: Text(
+                            'Don\'t Have Garadget?',
+                          ),
+                          onPressed: () {
+                            canLaunch(LINK_BUY).then((ok) {
+                              if (ok) {
+                                launch(LINK_BUY);
+                              }
+                            });
                           },
                         ),
                       ],

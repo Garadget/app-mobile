@@ -82,8 +82,8 @@ class _GeofenceMapState extends State<GeofenceMap> {
 
           return LayoutBuilder(builder: (context, constraints) {
             return Container(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 50),
-              height: constraints.maxWidth - 100,
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 40),
+              height: constraints.maxWidth - 60,
               child: GoogleMap(
                 gestureRecognizers: <Factory<OneSequenceGestureRecognizer>>[
                   new Factory<OneSequenceGestureRecognizer>(
@@ -109,15 +109,15 @@ class _GeofenceMapState extends State<GeofenceMap> {
 
                   _mapController = controller;
                   // want for map to finish initializing
-//                  await _mapController.getVisibleRegion();
+                  await _mapController.getVisibleRegion();
                   _callback(widget.onReady);
                 },
                 onCameraMove: (loc) async {
                   if (!_rescaleReady) {
                     return;
                   }
-                  await _rescaleGeofence(loc);
                   _location = loc.target;
+                  await _rescaleGeofence(loc);
                   await _callback(widget.onChange);
                   setState(() {});
                 },
@@ -163,7 +163,6 @@ class _GeofenceMapState extends State<GeofenceMap> {
   }
 
   Future<void> _rescaleMap() async {
-    print('rescaling map');
     // calculate boudaries from center and radius plus padding
     var center = latlong.LatLng(
       _location.latitude,
@@ -171,12 +170,12 @@ class _GeofenceMapState extends State<GeofenceMap> {
     );
 
     final distance = const latlong.Distance();
-    final center2corner = _radius / MAP2RADIUS * 0.707106781;
+    final center2corner = _radius / (MAP2RADIUS * 2.0 * 0.707106781);
 
     var northeast = distance.offset(center, center2corner, 45);
     var southwest = distance.offset(center, center2corner, 225);
 
-    await _mapController.animateCamera(
+    await _mapController.moveCamera(
       CameraUpdate.newLatLngBounds(
         LatLngBounds(
           northeast: LatLng(

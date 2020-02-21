@@ -113,8 +113,12 @@ class ProviderAccount with ChangeNotifier {
 
     try {
       if (!_isGeofenceReady) {
+        var locationOptions = LocationOptions(
+          accuracy: LocationAccuracy.medium,
+          distanceFilter: 100,
+        );
         _locationUpdates =
-            Geolocator().getPositionStream().listen(_handleLocationUpdate);
+            Geolocator().getPositionStream(locationOptions).listen(_handleLocationUpdate);
         _isGeofenceReady = true;
       }
     } catch (error) {
@@ -123,7 +127,11 @@ class ProviderAccount with ChangeNotifier {
   }
 
   Future<void> _handleLocationUpdate(Position location) {
-//    print('location update: ${location.latitude}, ${location.longitude}');
+    print('location update: ${location.latitude}, ${location.longitude}');
+    if (isAppActive) {
+      return Future.value();
+    }
+
     final List<String> statusList = [];
     String firstId;
     return Future.wait(_devices.map((device) async {
@@ -131,8 +139,8 @@ class ProviderAccount with ChangeNotifier {
         location.latitude,
         location.longitude,
       );
-//z      print('geo status: $geoStatus');
-      if (geoStatus != GeofenceStatus.EXIT || isAppActive) {
+//      print('geo status: $geoStatus');
+      if (geoStatus != GeofenceStatus.EXIT) {
         return Future.value();
       }
       try {
@@ -465,7 +473,9 @@ class ProviderAccount with ChangeNotifier {
             }
           } catch (exception) {
             final error = exception.toString();
-            if (error != 'timeout' && error != 'offline' && _refreshTimer.isActive) {
+            if (error != 'timeout' &&
+                error != 'offline' &&
+                _refreshTimer.isActive) {
               // flag account level request errors
               updateErrors.add('${device.name}:  $error');
             }
@@ -707,7 +717,8 @@ class ProviderAccount with ChangeNotifier {
   }
 
   void requireLocalAuth() {
-    if (authTime != null && (DateTime.now().millisecondsSinceEpoch - authTime) < AUTH_TIMEOUT) {
+    if (authTime != null &&
+        (DateTime.now().millisecondsSinceEpoch - authTime) < AUTH_TIMEOUT) {
       return;
     }
     _localAuth = true;

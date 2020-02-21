@@ -8,7 +8,6 @@ import '../providers/account.dart';
 import '../misc/input_decoration.dart';
 import '../widgets/busy_message.dart';
 import '../widgets/network_error.dart';
-import '../widgets/bottom_bar_button.dart';
 import '../widgets/form_logo.dart';
 import './home.dart';
 
@@ -193,7 +192,7 @@ class _ScreenAccountSigninState extends State<ScreenAccountSignin> {
                                 ScreenAccountSignup.routeName);
                           },
                         ),
-                        SizedBox(
+                        const SizedBox(
                           width: 10,
                         ),
                         FlatButton(

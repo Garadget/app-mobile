@@ -11,6 +11,7 @@ import '../screens/local_auth.dart';
 
 const LINK_HELP = 'https://community.garadget.com/';
 const LINK_SOURCE = 'https://github.com/Garadget/';
+const LINK_BUY = 'https://www.garadget.com/store/';
 
 class WidgetHomeDrawer extends StatelessWidget {
   @override
@@ -69,6 +70,11 @@ class WidgetHomeDrawer extends StatelessWidget {
                                 ),
                               ),
                               Divider(),
+                              WidgetDrawerItem(
+                                'Shop Garadget',
+                                Icons.store,
+                                link: LINK_BUY,
+                              ),
                               WidgetDrawerItem(
                                 'Get Help',
                                 Icons.help_outline,

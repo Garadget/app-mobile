@@ -6,7 +6,6 @@ import './account_signin.dart';
 import '../providers/account.dart';
 import '../widgets/busy_message.dart';
 import '../widgets/network_error.dart';
-import '../widgets/bottom_bar_button.dart';
 import '../widgets/form_logo.dart';
 
 class ScreenAccountReset extends StatefulWidget {

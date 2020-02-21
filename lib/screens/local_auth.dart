@@ -294,8 +294,6 @@ Future<bool> localAuthChallageDialog(
   BuildContext context,
   AuthLevel authLevel,
 ) async {
-  print('challenge dialog');
-
   final _account = Provider.of<ProviderAccount>(context, listen: false);
   if (_account.isLocalAuthNeeded(authLevel) == null || _account.isInLocalAuth) {
     return true;

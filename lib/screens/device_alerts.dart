@@ -496,19 +496,26 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                     longitude: _device.getValue('geo/longitude'),
                     radius: _device.getValue('geo/radius'),
                     onReady: (latitude, longitude, radius) async {
-                      await _scrollController.animateTo(
-                        _scrollController.position.maxScrollExtent,
-                        duration: const Duration(milliseconds: 500),
-                        curve: Curves.easeOut,
-                      );
+                      if (_mapInit) {
+                        // scroll map into the view
+                        print('scroller max: ${_scrollController.position.maxScrollExtent}');
+                        await _scrollController.animateTo(
+                          _scrollController.position.maxScrollExtent,
+                          duration: const Duration(milliseconds: 500),
+                          curve: Curves.easeOut,
+                        );
+                        _mapInit = false;
+                        print('closing popup');
+                        Navigator.of(context).pop();
+                      }
                     },
                     onChange: (latitude, longitude, radius) async {
 //                      print('map update: $latitude/$longitude/$radius');
                     },
                     onError: (error) {
                       if (_mapInit) {
-                        Navigator.of(context).pop();
                         _mapInit = false;
+                        Navigator.of(context).pop();
                       }
                       showErrorDialog(
                           context, 'Location Services Error', error.toString());
@@ -516,11 +523,7 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                       setState(() {});
                     },
                     onIdle: (latitude, longitude, radius) async {
-                      await _saveGeofence(latitude, longitude, radius);
-                      if (_mapInit) {
-                        Navigator.of(context).pop();
-                        _mapInit = false;
-                      }
+                        await _saveGeofence(latitude, longitude, radius);
                     })
                 : SizedBox.shrink(),
           ],
