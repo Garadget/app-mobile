@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/device.dart';
 import '../misc/input_decoration.dart';
 import '../providers/account.dart';
+import './home.dart';
 import './account_signin.dart';
 import '../widgets/linked_text.dart';
 import '../widgets/busy_message.dart';
@@ -295,15 +296,19 @@ class _ScreenDeviceAddConfirmState extends State<ScreenDeviceAddConfirm> {
               child: Text('logout'),
               onPressed: () {
                 Navigator.of(context).pushNamedAndRemoveUntil(
-                    ScreenAccountSignin.routeName, (route) => route.isFirst);
+                  ScreenAccountSignin.routeName,
+                  (route) => route.isFirst,
+                );
               },
             )
           : FlatButton(
               child: const Text('Cancel'),
               onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pop();
-                Navigator.of(context).pop(_deviceId);
+                _account.deviceSelectById(_deviceId);
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  ScreenHome.routeName,
+                  (route) => route.isFirst,
+                );
               },
             );
       actionButton = RaisedButton(
@@ -356,10 +361,11 @@ class _ScreenDeviceAddConfirmState extends State<ScreenDeviceAddConfirm> {
     try {
       await showBusyMessage(context, 'Submitting...');
       await _device.rename(_deviceName);
-      Navigator.of(context).pop(); // to confirm
-      Navigator.of(context).pop(); // to configure
-      Navigator.of(context).pop(); // to intro
-      Navigator.of(context).pop(_deviceId); // to home
+      _account.deviceSelectById(_deviceId);
+      Navigator.of(context).pushNamedAndRemoveUntil(
+        ScreenHome.routeName,
+        (route) => route.isFirst,
+      );
     } catch (error) {
       showErrorDialog(context, 'Error Renaming',
           'There was an error renaming your Garadget.\n\nDetails: ${error.toString()}');

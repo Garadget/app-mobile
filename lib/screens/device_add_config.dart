@@ -8,6 +8,7 @@ import '../widgets/error_message.dart';
 import '../widgets/busy_message.dart';
 import '../misc/input_decoration.dart';
 import '../providers/account.dart';
+import './home.dart';
 import './device_add_confirm.dart';
 import './account_signin.dart';
 
@@ -239,8 +240,13 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
                   : FlatButton(
                       child: const Text('Cancel'),
                       onPressed: () {
-                        Navigator.of(context).pop();
-                        Navigator.of(context).pop(_isComplete ? _deviceId : null);
+                        if (_isComplete) {
+                          _account.deviceSelectById(_deviceId);
+                        }
+                        Navigator.of(context).pushNamedAndRemoveUntil(
+                          ScreenHome.routeName,
+                          (route) => route.isFirst,
+                        );
                       },
                     ),
               RaisedButton(
@@ -302,7 +308,10 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
       }
       Navigator.of(context).pop();
       Navigator.of(context)
-          .pushNamed(ScreenDeviceAddConfirm.routeName, arguments: _deviceId)
+          .pushNamed(
+        ScreenDeviceAddConfirm.routeName,
+        arguments: _deviceId,
+      )
           .then((_) {
         _testConnection();
       });

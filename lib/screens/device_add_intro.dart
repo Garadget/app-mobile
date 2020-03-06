@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../providers/account.dart';
 import '../widgets/busy_message.dart';
 import '../widgets/network_error.dart';
+import './home.dart';
 import './device_add_config.dart';
 import './account_signin.dart';
 
@@ -14,7 +15,8 @@ class ScreenDeviceAddIntro extends StatefulWidget {
   _ScreenDeviceAddIntroState createState() => _ScreenDeviceAddIntroState();
 }
 
-class _ScreenDeviceAddIntroState extends State<ScreenDeviceAddIntro> {
+class _ScreenDeviceAddIntroState extends State<ScreenDeviceAddIntro>
+    with WidgetsBindingObserver {
   bool _isLoading = false;
   bool _isFirstRun = true;
   String _errorMessage;
@@ -22,9 +24,14 @@ class _ScreenDeviceAddIntroState extends State<ScreenDeviceAddIntro> {
   String _claimCode;
 
   @override
-  void deactivate() {
-    _isFirstRun = true;
-    super.deactivate();
+  void initState() {
+    WidgetsBinding.instance.addObserver(this);
+    super.initState();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _account.appLifecycleState(state);
   }
 
   @override
@@ -71,7 +78,6 @@ class _ScreenDeviceAddIntroState extends State<ScreenDeviceAddIntro> {
 
   @override
   Widget build(BuildContext context) {
-
     Widget body;
     Widget footer = SizedBox.shrink();
     if (_isLoading && _errorMessage == null) {
@@ -119,14 +125,18 @@ class _ScreenDeviceAddIntroState extends State<ScreenDeviceAddIntro> {
                     child: Text('logout'),
                     onPressed: () {
                       Navigator.of(context).pushNamedAndRemoveUntil(
-                          ScreenAccountSignin.routeName,
-                          (route) => route.isFirst);
+                        ScreenAccountSignin.routeName,
+                        (route) => route.isFirst,
+                      );
                     },
                   )
                 : FlatButton(
                     child: const Text('Cancel'),
                     onPressed: () {
-                        Navigator.of(context).pop();
+                      Navigator.of(context).pushNamedAndRemoveUntil(
+                        ScreenHome.routeName,
+                        (route) => route.isFirst,
+                      );
                     },
                   ),
             RaisedButton(
@@ -135,8 +145,9 @@ class _ScreenDeviceAddIntroState extends State<ScreenDeviceAddIntro> {
                   ? null
                   : () {
                       Navigator.of(context).pushNamed(
-                          ScreenDeviceAddConfig.routeName,
-                          arguments: _claimCode);
+                        ScreenDeviceAddConfig.routeName,
+                        arguments: _claimCode,
+                      );
                     },
             ),
           ],
@@ -151,5 +162,17 @@ class _ScreenDeviceAddIntroState extends State<ScreenDeviceAddIntro> {
       bottomNavigationBar: footer,
       body: body,
     );
+  }
+
+  @override
+  void deactivate() {
+    _isFirstRun = true;
+    super.deactivate();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
   }
 }

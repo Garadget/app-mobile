@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
+import 'package:location_permissions/location_permissions.dart';
 
 import '../providers/account.dart';
 import '../widgets/busy_message.dart';
@@ -477,11 +478,17 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
               'Enable',
               geoEnabled,
               (value) async {
-                if (value && !_mapInit) {
-                  _mapInit = true;
-                  showBusyMessage(context, 'Loading Map');
-                }
                 if (value) {
+
+                  PermissionStatus permission = await LocationPermissions().requestPermissions();
+                  if (permission != PermissionStatus.granted) {
+                    return;
+                  }
+
+                  if (!_mapInit) {
+                    _mapInit = true;
+                    showBusyMessage(context, 'Loading Map');
+                  }
                   await _deviceSaveValue('geo/enabled', true);
                 } else {
                   await _saveGeofence(null, null, null);
@@ -498,7 +505,8 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                     onReady: (latitude, longitude, radius) async {
                       if (_mapInit) {
                         // scroll map into the view
-                        print('scroller max: ${_scrollController.position.maxScrollExtent}');
+                        print(
+                            'scroller max: ${_scrollController.position.maxScrollExtent}');
                         await _scrollController.animateTo(
                           _scrollController.position.maxScrollExtent,
                           duration: const Duration(milliseconds: 500),
@@ -523,7 +531,7 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
                       setState(() {});
                     },
                     onIdle: (latitude, longitude, radius) async {
-                        await _saveGeofence(latitude, longitude, radius);
+                      await _saveGeofence(latitude, longitude, radius);
                     })
                 : SizedBox.shrink(),
           ],

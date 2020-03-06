@@ -57,22 +57,9 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (!_account.isAuthenticated) {
-      _account.fulfillLocalAuth();
-      return;
-    }
-    _account.requireLocalAuth();
-
-    switch (state) {
-      case AppLifecycleState.detached:
-      case AppLifecycleState.inactive:
-      case AppLifecycleState.paused:
-        _account.isAppActive = false;
-        break;
-      case AppLifecycleState.resumed:
-        _account.isAppActive = true;
-        localAuthChallageDialog(context, AuthLevel.ALWAYS);
-        break;
+    _account.appLifecycleState(state);
+    if (state == AppLifecycleState.resumed) {
+      localAuthChallageDialog(context, AuthLevel.ALWAYS);
     }
   }
 
@@ -114,18 +101,9 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
             onPressed: () {
               _account.stopTimer();
               Navigator.of(context)
-                  .pushNamed(
+                  .pushReplacementNamed(
                 ScreenDeviceAddIntro.routeName,
-                arguments: null,
-              )
-                  .then((deviceId) {
-                _networkRequest(() => _account.loadDevices()).then((_) {
-                  if (deviceId != null) {
-                    _account.deviceSelectById(deviceId);
-                  }
-                });
-                _account.startTimer();
-              });
+              );
             },
           )
         ],

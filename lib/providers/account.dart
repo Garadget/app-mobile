@@ -88,11 +88,10 @@ class ProviderAccount with ChangeNotifier {
   }
 
   Future<void> initGeofence() async {
-    print('init geofence');
     if (!isUsingLocation) {
       if (_locationUpdates != null) {
-        print('turning off location');
         await _locationUpdates?.cancel();
+        print('location turned off');
         _locationUpdates = null;
         _isGeofenceReady = false;
 //        await GeofencingManager.demoteToBackground();
@@ -124,6 +123,7 @@ class ProviderAccount with ChangeNotifier {
     } catch (error) {
       _initErrors.add('Error Initializing Geofencing: ${error.toString()}');
     }
+    print('geofence ready');
   }
 
   Future<void> _handleLocationUpdate(Position location) {
@@ -399,15 +399,16 @@ class ProviderAccount with ChangeNotifier {
 
     // get device list from Particle
     try {
+      _devices = [];
       List<particle.Device> devices = await _particleAccount.getDevices();
       if (devices.length > 0) {
         _devices =
             devices.map((particleDevice) => Device(particleDevice)).toList();
-        loadConfig().then((_) {
-          _onAccountLoaded();
-        }); // no await
+        await loadConfig();
       }
     } finally {
+      // no await
+      _onAccountLoaded();
       await _onDevicesLoaded();
     }
     return true;
@@ -778,6 +779,24 @@ class ProviderAccount with ChangeNotifier {
 
   bool isPinCodeCorrect(String value) {
     return value == _storage.getString(STKEY_PINCODE);
+  }
+
+  void appLifecycleState(AppLifecycleState state) {
+    if (!isAuthenticated) {
+      fulfillLocalAuth();
+      return;
+    }
+    requireLocalAuth();
+    switch (state) {
+      case AppLifecycleState.detached:
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+        isAppActive = false;
+        break;
+      case AppLifecycleState.resumed:
+        isAppActive = true;
+        break;
+    }
   }
 
   List<Device> get devices {

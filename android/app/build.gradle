@@ -31,7 +31,7 @@ def keystorePropertiesFile = rootProject.file('../.secret/key.properties')
 keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
 
 android {
-    compileSdkVersion 28
+    compileSdkVersion 29
 
     sourceSets {
         main.java.srcDirs += 'src/main/kotlin'

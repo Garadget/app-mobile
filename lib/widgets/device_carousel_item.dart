@@ -28,7 +28,6 @@ class _WidgetDeviceCarouselItemState extends State<WidgetDeviceCarouselItem> {
 
   @override
   void initState() {
-    animationController.device = widget.device;
     super.initState();
   }
 
@@ -36,6 +35,7 @@ class _WidgetDeviceCarouselItemState extends State<WidgetDeviceCarouselItem> {
   Widget build(BuildContext context) {
     _account = Provider.of<ProviderAccount>(context, listen: false);
     Provider.of<ProviderDeviceStatus>(context, listen: true);
+    animationController.device = widget.device;
     animationController.start();
 
     return GestureDetector(

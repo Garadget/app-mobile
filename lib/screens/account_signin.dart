@@ -35,12 +35,6 @@ class _ScreenAccountSigninState extends State<ScreenAccountSignin> {
   }
 
   @override
-  void deactivate() {
-    _isFirstRun = true;
-    super.deactivate();
-  }
-
-  @override
   void didChangeDependencies() async {
     if (_isFirstRun) {
       _isFirstRun = false;
@@ -224,4 +218,11 @@ class _ScreenAccountSigninState extends State<ScreenAccountSignin> {
       body: SafeArea(child: body),
     );
   }
+
+  @override
+  void deactivate() {
+    _isFirstRun = true;
+    super.deactivate();
+  }
+
 }

@@ -36,12 +36,6 @@ class _ScreenAccountSignupState extends State<ScreenAccountSignup> {
   }
 
   @override
-  void deactivate() {
-    _isFirstRun = true;
-    super.deactivate();
-  }
-
-  @override
   void didChangeDependencies() async {
     if (_isFirstRun) {
       _isFirstRun = false;
@@ -223,5 +217,11 @@ class _ScreenAccountSignupState extends State<ScreenAccountSignup> {
         child: body,
       ),
     );
+  }
+
+  @override
+  void deactivate() {
+    _isFirstRun = true;
+    super.deactivate();
   }
 }

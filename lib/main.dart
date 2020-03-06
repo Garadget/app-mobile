@@ -34,6 +34,7 @@ class App extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Garadget',
+        debugShowCheckedModeBanner: false,
         theme: ThemeData(
 //        brightness: Brightness.dark,
           primarySwatch: MaterialColor(0xff005e20, {
