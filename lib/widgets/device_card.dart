@@ -20,7 +20,7 @@ class WidgetDeviceCard extends StatelessWidget {
 
     if (_account.initErrors.length > 0) {
       Future.delayed(Duration.zero, () {
-        showSnackbarMessage(context, _account.initErrors.join("\n"));
+        showSnackbarMessage(context, _account.initErrors.join('\n'));
         _account.initErrors.clear();
       });
     }

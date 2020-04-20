@@ -13,7 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 const LINK_BUY = 'https://www.garadget.com/product/garadget/';
 
 class ScreenAccountSignup extends StatefulWidget {
-  static const routeName = "/account/signup";
+  static const routeName = '/account/signup';
 
   @override
   _ScreenAccountSignupState createState() => _ScreenAccountSignupState();
@@ -129,7 +129,7 @@ class _ScreenAccountSignupState extends State<ScreenAccountSignup> {
                           return 'Email is required';
                         }
                         final re = RegExp(
-                            r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
+                            r"^[a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9.]+\.[a-zA-Z]+");
                         if (!re.hasMatch(value)) {
                           return 'Invalid format of Email';
                         }

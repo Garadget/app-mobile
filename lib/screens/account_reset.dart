@@ -9,7 +9,7 @@ import '../widgets/network_error.dart';
 import '../widgets/form_logo.dart';
 
 class ScreenAccountReset extends StatefulWidget {
-  static const routeName = "/account/reset";
+  static const routeName = '/account/reset';
 
   @override
   _ScreenAccountResetState createState() => _ScreenAccountResetState();
@@ -173,7 +173,7 @@ class _ScreenAccountResetState extends State<ScreenAccountReset> {
                           return 'Email is required';
                         }
                         final re = RegExp(
-                            r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9]+\.[a-zA-Z]+");
+                            r"^[a-zA-Z0-9.!#$%&'*+-/=?^_`{|}~]+@[a-zA-Z0-9.]+\.[a-zA-Z]+");
                         if (!re.hasMatch(value)) {
                           return 'Invalid format of Email';
                         }

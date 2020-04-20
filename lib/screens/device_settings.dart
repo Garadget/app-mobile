@@ -286,7 +286,7 @@ class _ScreenDeviceSettingsState extends State<ScreenDeviceSettings> {
 
   void _copyToClipboard(BuildContext context, String text) {
     Clipboard.setData(ClipboardData(text: text));
-    showSnackbarMessage(context, "Copied to Clipboard",
+    showSnackbarMessage(context, 'Copied to Clipboard',
         icon: Icons.content_copy);
   }
 
@@ -362,7 +362,7 @@ class _ScreenDeviceSettingsState extends State<ScreenDeviceSettings> {
                     }).then((_) {
                       print('renamed');
                     }).catchError((error) {
-                      showSnackbarMessage(context, "Error Renaming Device");
+                      showSnackbarMessage(context, 'Error Renaming Device');
                       print('error: ${error.toString()}');
                     });
                     return true;

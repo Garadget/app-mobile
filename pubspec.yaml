@@ -11,7 +11,7 @@ description: Garadget App
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 2.0.2+8
+version: 2.0.3+9
 
 environment:
   sdk: ">=2.3.0 <3.0.0"
@@ -21,25 +21,25 @@ dependencies:
     sdk: flutter
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  flutter_svg: ^0.17.2
+  flutter_svg: ^0.17.4
 #  carousel_slider: ^1.3.0
-  flare_flutter: ^2.0.1
-  provider: ^4.0.4
+  flare_flutter: ^2.0.3
+  provider: ^4.0.5
   http: ^0.12.0+4
-  shared_preferences: ^0.5.6+2
+  shared_preferences: ^0.5.6+3
   flutter_time_picker_spinner: ^1.0.6
-  url_launcher: ^5.4.1
-  package_info: ^0.4.0+14
+  url_launcher: ^5.4.2
+  package_info: ^0.4.0+16
   local_auth: ^0.6.1+3
-  firebase_messaging: ^6.0.12
+  firebase_messaging: ^6.0.13
 #  geolocator: ^5.2.1
-  location_permissions: ^2.0.4+1
+  location_permissions: ^2.0.5
   geolocator:
     path: ./lib/packages/flutter-geolocator
   
-  google_maps_flutter: ^0.5.24+1
+  google_maps_flutter: ^0.5.25+3
   latlong: ^0.6.1
-  flutter_local_notifications: ^1.2.0+4
+  flutter_local_notifications: ^1.4.1
   particle_setup:
     path: ./lib/packages/particle_setup
 

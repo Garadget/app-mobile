@@ -14,7 +14,7 @@ import '../widgets/info_box.dart';
 const DEVICE_NAME_PREFIX = 'Garage';
 
 class ScreenDeviceAddConfirm extends StatefulWidget {
-  static const routeName = "/device/add/confirm";
+  static const routeName = '/device/add/confirm';
 
   @override
   _ScreenDeviceAddConfirmState createState() => _ScreenDeviceAddConfirmState();
@@ -320,7 +320,7 @@ class _ScreenDeviceAddConfirmState extends State<ScreenDeviceAddConfirm> {
     }
     return Scaffold(
       appBar: AppBar(
-        title: Text("Wrapping Up"),
+        title: Text('Wrapping Up'),
       ),
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.symmetric(

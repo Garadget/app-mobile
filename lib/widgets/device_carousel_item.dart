@@ -9,11 +9,10 @@ import '../providers/account.dart';
 import '../providers/device_status.dart';
 import '../screens/local_auth.dart';
 
-
 class WidgetDeviceCarouselItem extends StatefulWidget {
   final Device device;
 
-  WidgetDeviceCarouselItem(this.device): super(key: Key(device.id));
+  WidgetDeviceCarouselItem(this.device) : super(key: Key(device.id));
 
   @override
   _WidgetDeviceCarouselItemState createState() =>
@@ -59,7 +58,7 @@ class _WidgetDeviceCarouselItemState extends State<WidgetDeviceCarouselItem> {
                   AspectRatio(
                     aspectRatio: 180 / 120,
                     child: FlareActor(
-                      "assets/animations/garage-door.flr",
+                      'assets/animations/garage-door.flr',
                       alignment: Alignment.center,
                       fit: BoxFit.fitWidth,
                       controller: animationController,
@@ -154,9 +153,8 @@ class _WidgetDeviceCarouselItemState extends State<WidgetDeviceCarouselItem> {
     }
     if (dy > 0) {
       _deviceCommand(widget.device.id, DoorCommands.CLOSE);
-    }
-    else if (dy < 0) {
-     _deviceCommand(widget.device.id, DoorCommands.OPEN);
+    } else if (dy < 0) {
+      _deviceCommand(widget.device.id, DoorCommands.OPEN);
     }
   }
 
@@ -164,13 +162,12 @@ class _WidgetDeviceCarouselItemState extends State<WidgetDeviceCarouselItem> {
     _updateVerticalDragDetails = swipeDetails;
   }
 
-  void _deviceCommand(String deviceId, DoorCommands command) {
-    localAuthChallageDialog(context, AuthLevel.ACTIONS).then((allowed) {
-      if (!allowed) {
-        return;
-      }
-      _account.deviceCommand(deviceId, command);
-    });
+  void _deviceCommand(String deviceId, DoorCommands command) async {
+    final allowed = await localAuthChallageDialog(context, AuthLevel.ACTIONS);
+    if (!allowed) {
+      return;
+    }
+    _account.deviceCommand(deviceId, command);
   }
 }
 
@@ -184,7 +181,6 @@ class WidgetProgressText extends StatefulWidget {
 }
 
 class _WidgetProgressTextState extends State<WidgetProgressText> {
-
   int progress = 0;
 
   @override
@@ -232,5 +228,4 @@ class _WidgetProgressTextState extends State<WidgetProgressText> {
     widget.animationController.onProgress = null;
     super.dispose();
   }
-
 }

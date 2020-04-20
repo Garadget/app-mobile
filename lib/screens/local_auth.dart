@@ -14,7 +14,7 @@ import './account_signin.dart';
 const MAX_ATTEMPTS = 3;
 
 class ScreenLocalAuth extends StatefulWidget {
-  static const routeName = "/account/auth";
+  static const routeName = '/account/auth';
 
   @override
   _ScreenLocalAuthState createState() => _ScreenLocalAuthState();
@@ -182,7 +182,7 @@ class _ScreenLocalAuthState extends State<ScreenLocalAuth> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text("Authentication"),
+            title: const Text('Authentication'),
           ),
           bottomNavigationBar: Padding(
             padding: const EdgeInsets.symmetric(
@@ -295,8 +295,11 @@ Future<bool> localAuthChallageDialog(
   AuthLevel authLevel,
 ) async {
   final _account = Provider.of<ProviderAccount>(context, listen: false);
-  if (_account.isLocalAuthNeeded(authLevel) == null || _account.isInLocalAuth) {
+  if (_account.isLocalAuthNeeded(authLevel) == null) {
     return true;
+  }
+  else if (_account.isInLocalAuth) {
+    return false;
   }
   _account.isInLocalAuth = true;
   try {
@@ -328,11 +331,11 @@ Future<bool> localAuthChallageDialog(
     if (_account.authLevel == AuthLevel.ALWAYS) {
       Navigator.of(context).popUntil((route) => route.isFirst);
       Navigator.of(context).pushReplacementNamed(ScreenAccountSignin.routeName);
-      _account.isInLocalAuth = false;
     }
     else if (error is PlatformException) {
       showSnackbarMessage(context, error.message, icon: Icons.fingerprint);
     }
+    _account.isInLocalAuth = false;
     return false;
   }
   return true;

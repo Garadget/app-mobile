@@ -60,7 +60,7 @@ class _OptionsSelectState extends State<OptionsSelect> {
                 Navigator.of(context).pop();
               }).catchError((error) {
                 Navigator.of(context).pop();
-                showSnackbarMessage(context, "Error Saving ${widget.label}");
+                showSnackbarMessage(context, 'Error Saving ${widget.label}');
                 print('error: ${error.toString()}');
               });
               return true;

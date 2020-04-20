@@ -30,10 +30,10 @@ class WidgetHomeDrawer extends StatelessWidget {
               return Container(
                 width: constraints.maxWidth * 0.75,
                 child: Drawer(
-                  semanticLabel: "Slide-In Menu",
+                  semanticLabel: 'Slide-In Menu',
                   child: Column(
                     children: <Widget>[
-                      WidgetDrawerHeader("Garadget"),
+                      WidgetDrawerHeader('Garadget'),
                       Expanded(
                         child: Padding(
                           padding: EdgeInsets.symmetric(

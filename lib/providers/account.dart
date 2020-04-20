@@ -77,7 +77,7 @@ class ProviderAccount with ChangeNotifier {
   void _initMessaging() {
     _firebaseMessaging.configure(
 //      onMessage: (Map<String, dynamic> message) async {
-//        print("onMessage: $message");
+//        print('onMessage: $message');
 //      },
       onResume: (Map<String, dynamic> message) async {
         final deviceId = message['data']['device'];

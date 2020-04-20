@@ -1,5 +1,5 @@
 import 'dart:async';
-import "particle.dart" as particle;
+import 'particle.dart' as particle;
 import 'package:geolocator/geolocator.dart';
 
 enum DoorStatus { OPEN, CLOSED, OPENING, CLOSING, STOPPED, UNKNOWN }
@@ -8,6 +8,7 @@ enum ConnectionStatus { ONLINE, TIMEOUT, OFFLINE, ERROR, LOADING, UNKNOWN }
 enum GeofenceStatus { DISABLED, ENTER, EXIT, IN, OUT }
 
 class Device {
+  static const DEFAULT_NAME = 'Garage';
   static const STKEY_CONFIG = 'config';
   static const STKEY_NET = 'net';
   static const STKEY_ALERTS = 'alerts';
@@ -490,6 +491,9 @@ class Device {
   }
 
   String get name {
+    if (particleDevice.name == null) {
+      return DEFAULT_NAME;
+    }
     return particleDevice.name.replaceAll('_', ' ');
   }
 

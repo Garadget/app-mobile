@@ -15,7 +15,7 @@ import './account_signin.dart';
 const SSIDPREFIX = 'Photon';
 
 class ScreenDeviceAddConfig extends StatefulWidget {
-  static const routeName = "/device/add/config";
+  static const routeName = '/device/add/config';
 
   @override
   _ScreenDeviceAddConfigState createState() => _ScreenDeviceAddConfigState();
@@ -218,7 +218,7 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
 
       return Scaffold(
         appBar: AppBar(
-          title: Text("WiFi Connection"),
+          title: Text('WiFi Connection'),
         ),
         bottomNavigationBar: Padding(
           padding: const EdgeInsets.symmetric(
@@ -360,8 +360,8 @@ class _ScreenDeviceAddConfigState extends State<ScreenDeviceAddConfig> {
         // print('pong');
         if (!_account.isAppActive && _localNotificationId == null) {
           _localNotificationId = await _account.localNotificationShow(
-            "Return to Garadget App",
-            "Click here to continue device setup",
+            'Return to Garadget App',
+            'Click here to continue device setup',
           );
         }
         setState(() {

@@ -53,38 +53,38 @@ class DoorAnimationController extends FlareController {
     }
 
     if (_device.connectionStatus != ConnectionStatus.ONLINE) {
-        _reference = "disabled";
+        _reference = 'disabled';
         _static = true;
     }
     else {
       switch (_device.doorStatus) {
         case DoorStatus.CLOSED:
-          _reference = "closed";
+          _reference = 'closed';
           _static = true;
           break;
 
         case DoorStatus.OPEN:
-          _reference = "open";
+          _reference = 'open';
           _static = true;
           break;
 
         case DoorStatus.OPENING:
-          _reference = "opening";
+          _reference = 'opening';
           _static = false;
           break;
 
         case DoorStatus.CLOSING:
-          _reference = "closing";
+          _reference = 'closing';
           _static = false;
           break;
 
         case DoorStatus.STOPPED:
-          _reference = "stopped";
+          _reference = 'stopped';
           _static = true;
           break;
 
         default:
-          _reference = "disabled";
+          _reference = 'disabled';
           _static = true;
           break;
       }

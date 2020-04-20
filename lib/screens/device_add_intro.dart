@@ -157,7 +157,7 @@ class _ScreenDeviceAddIntroState extends State<ScreenDeviceAddIntro>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Add Device - Prepare"),
+        title: const Text('Add Device - Prepare'),
       ),
       bottomNavigationBar: footer,
       body: body,

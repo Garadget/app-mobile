@@ -11,7 +11,7 @@
 .code-workspace
 
 # sensitive configuration
-.secret
+_secret
 key.properties
 google-services.json
 secrets.dart

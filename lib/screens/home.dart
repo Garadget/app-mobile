@@ -16,7 +16,7 @@ import './local_auth.dart';
 const URL_COMMUNITY_BOARD = 'https://status.particle.io';
 
 class ScreenHome extends StatefulWidget {
-  static const routeName = "/";
+  static const routeName = '/';
 
   @override
   _ScreenHomeState createState() => _ScreenHomeState();
@@ -77,7 +77,7 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
     } else if (MediaQuery.of(context).orientation == Orientation.portrait) {
       body = _buildPortrait(context);
     } else {
-      throw ("Unsupported Orientation");
+      throw ('Unsupported Orientation');
     }
 
     return Scaffold(
