@@ -32,6 +32,7 @@ GoogleService-Info.plist
 
 # Flutter/Dart/Pub related
 **/doc/api/
+/pubspec.lock
 .dart_tool/
 .flutter-plugins
 .flutter-plugins-dependencies

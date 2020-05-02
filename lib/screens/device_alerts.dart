@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 
 import 'package:provider/provider.dart';
 import 'package:flutter_time_picker_spinner/flutter_time_picker_spinner.dart';
-import 'package:location_permissions/location_permissions.dart';
 
 import '../providers/account.dart';
 import '../widgets/busy_message.dart';
 import '../models/device.dart';
+import '../models/app_exception.dart';
 import '../widgets/bottom_navigation.dart';
 import '../widgets/error_message.dart';
 import '../widgets/settings_header.dart';
@@ -480,8 +480,10 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
               (value) async {
                 if (value) {
 
-                  PermissionStatus permission = await LocationPermissions().requestPermissions();
-                  if (permission != PermissionStatus.granted) {
+                  try {
+                    await ProviderAccount.checkLocationSettings();
+                  } on AppException catch (error) {
+                    showErrorDialog(context, error.title, error.message);
                     return;
                   }
 

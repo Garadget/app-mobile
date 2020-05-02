@@ -6,11 +6,13 @@ import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
+import 'package:location_permissions/location_permissions.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../models/device.dart';
 import '../models/particle.dart' as particle;
+import '../models/app_exception.dart';
 import './device_status.dart';
 import './device_info.dart';
 
@@ -87,43 +89,56 @@ class ProviderAccount with ChangeNotifier {
     );
   }
 
+  static Future<void> checkLocationSettings() async {
+    const title = 'Location Services';
+
+    ServiceStatus serviceStatus =
+        await LocationPermissions().checkServiceStatus();
+    if (serviceStatus != ServiceStatus.enabled) {
+      throw (AppException(title,
+          'Location services are not enabled for this device. To receive Departure Alerts turn on location services in system settings.'));
+    }
+    PermissionStatus permissionStatus = await LocationPermissions().requestPermissions();
+
+    // PermissionStatus permissionStatus =
+    //     await LocationPermissions().checkPermissionStatus();
+    if (permissionStatus != PermissionStatus.granted) {
+      throw (AppException(title,
+          'Location services are not enabled for this app. To receive Departure Alerts set location permissions for this app to "Always Allow".'));
+    }
+  }
+
   Future<void> initGeofence() async {
     if (!isUsingLocation) {
       if (_locationUpdates != null) {
         await _locationUpdates?.cancel();
-        print('location turned off');
         _locationUpdates = null;
         _isGeofenceReady = false;
 //        await GeofencingManager.demoteToBackground();
+        print('location turned off');
       }
-      return;
-    }
-
-    try {
-      await Geolocator().getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.best,
-        locationPermissionLevel: GeolocationPermission.locationAlways,
-      );
-    } on PlatformException catch (error) {
-      _initErrors.add(
-          'The app was unable to access the location used for departure alert.\nSet Location access for Garadget to \'Always\'.\n\nSystem Response: ${error.message}');
       return;
     }
 
     try {
       if (!_isGeofenceReady) {
+        await checkLocationSettings();
         var locationOptions = LocationOptions(
           accuracy: LocationAccuracy.medium,
           distanceFilter: 100,
         );
-        _locationUpdates =
-            Geolocator().getPositionStream(locationOptions).listen(_handleLocationUpdate);
+        _locationUpdates = Geolocator()
+            .getPositionStream(locationOptions)
+            .listen(_handleLocationUpdate);
         _isGeofenceReady = true;
       }
-    } catch (error) {
+      print('geofence ready');
+    } on AppException catch (error) {
+      _initErrors.add(error.message);
+    }
+    catch (error) {
       _initErrors.add('Error Initializing Geofencing: ${error.toString()}');
     }
-    print('geofence ready');
   }
 
   Future<void> _handleLocationUpdate(Position location) {

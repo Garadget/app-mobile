@@ -226,8 +226,7 @@ class _GeofenceMapState extends State<GeofenceMap> {
     } else {
       try {
         final location = await Geolocator().getCurrentPosition(
-          desiredAccuracy: LocationAccuracy.best,
-          locationPermissionLevel: GeolocationPermission.locationAlways,
+          desiredAccuracy: LocationAccuracy.best
         );
         _location = LatLng(
           location.latitude,
@@ -238,7 +237,7 @@ class _GeofenceMapState extends State<GeofenceMap> {
         return Future.value(false);
       }
     }
-    // print('location: ${_location.latitude}/${_location.longitude}');
+    print('location: ${_location.latitude}/${_location.longitude}');
     _radius = widget.radius ?? 200.00;
     final config =
         createLocalImageConfiguration(context, size: const Size(32, 44));

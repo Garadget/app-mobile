@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../packages/particle_setup/lib/particle_setup.dart';
+import 'package:particle_setup/particle_setup.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 const URL_SERVER_STATUS = 'https://status.particle.io';

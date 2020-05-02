@@ -109,7 +109,8 @@ class _ScreenDeviceAddConfirmState extends State<ScreenDeviceAddConfirm> {
             _isConfirmed = true;
             _resetAdvice = false;
           });
-        } else if (_device.connectionStatus == ConnectionStatus.ONLINE) {
+        }
+        if (_device != null && _device.connectionStatus == ConnectionStatus.ONLINE) {
           setState(() {
             _isDeviceOnline = true;
             _deviceOfflineAdvice = false;
