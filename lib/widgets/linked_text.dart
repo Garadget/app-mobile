@@ -20,7 +20,7 @@ class LinkedText extends StatelessWidget {
           InkWell(
             child: Text(
               text,
-              style: Theme.of(context).textTheme.body1.copyWith(
+              style: Theme.of(context).textTheme.bodyText2.copyWith(
                     decoration: TextDecoration.underline,
                     color: Theme.of(context).primaryColor,
                   ),

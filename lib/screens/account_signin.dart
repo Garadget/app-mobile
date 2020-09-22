@@ -180,7 +180,7 @@ class _ScreenAccountSigninState extends State<ScreenAccountSignin> {
                         FlatButton(
                           materialTapTargetSize:
                               MaterialTapTargetSize.shrinkWrap,
-                          child: Text('Don\'t have Account?'),
+                          child: Text('Don\'t Have Account?'),
                           onPressed: () {
                             Navigator.of(context).pushReplacementNamed(
                                 ScreenAccountSignup.routeName);

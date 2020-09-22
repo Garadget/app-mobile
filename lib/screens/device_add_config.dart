@@ -455,7 +455,7 @@ class WifiEntry extends StatelessWidget {
                   entry.wifiSecurityType.toString() +
                       ', ' +
                       entry.wifiSignalStrength.toString(),
-                  style: Theme.of(context).textTheme.body2,
+                  style: Theme.of(context).textTheme.bodyText1,
                   softWrap: false,
                   overflow: TextOverflow.fade,
                 ),

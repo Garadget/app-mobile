@@ -71,13 +71,13 @@ class ErrorScreen extends StatelessWidget {
                 const SizedBox(height: 15),
                 Text(
                   header ?? 'Error',
-                  style: Theme.of(context).textTheme.title,
+                  style: Theme.of(context).textTheme.headline6,
                 ),
                 const SizedBox(height: 10),
                 Text(
                   message,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.body2,
+                  style: Theme.of(context).textTheme.bodyText1,
                 ),
               ],
             ),

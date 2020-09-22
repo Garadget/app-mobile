@@ -2,13 +2,13 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 import 'package:location_permissions/location_permissions.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:quick_actions/quick_actions.dart';
 
 import '../models/device.dart';
 import '../models/particle.dart' as particle;
@@ -51,6 +51,7 @@ class ProviderAccount with ChangeNotifier {
 
   List<Device> _devices = [];
   SharedPreferences _storage;
+  QuickActions _quickActions;
   Timer _refreshTimer;
   String _selectedDeviceId;
   bool _isUpdatingStatus = false;
@@ -65,6 +66,7 @@ class ProviderAccount with ChangeNotifier {
   bool isAppActive = true;
 
   Future<bool> init() async {
+    print('app init');
     _initNotifications();
     await initStorage();
 
@@ -74,6 +76,59 @@ class ProviderAccount with ChangeNotifier {
     }
     _particleAccount.token = authToken;
     return loadDevicesCached();
+  }
+
+  Future<void> _initQuickActions() async {
+    _quickActions = QuickActions();
+    _quickActions.initialize((String shortcutType) async {
+      if (!isAuthenticated) {
+        return;
+      }
+      final List<String> shortcutCommand = shortcutType.split('/');
+
+      // validate command string
+      switch (shortcutCommand[1]) {
+        case 'open':
+        case 'close':
+          break;
+        default:
+          return;
+      }
+
+      // make sure device exists and online
+      print('device: ${shortcutCommand[0]}, command: ${shortcutCommand[1]}');
+      final device = getDeviceById(shortcutCommand[0]);
+      if (device == null) {
+        return;
+      }
+      await device.commandRemote(shortcutCommand[1]);
+      updateSelection(device.id);
+    });
+
+    final List<ShortcutItem> quickActionsItems = [];
+    _devices.forEach((device) {
+      if (quickActionsItems.length >= 4) {
+        return;
+      }
+      quickActionsItems.add(ShortcutItem(
+        type: '${device.id}/open',
+        localizedTitle: 'Open ${device.name}',
+        icon: 'ic_quick_action_open',
+      ));
+      quickActionsItems.add(ShortcutItem(
+        type: '${device.id}/close',
+        localizedTitle: 'Close ${device.name}',
+        icon: 'ic_quick_action_close',
+      ));
+    });
+    await _quickActions.setShortcutItems(quickActionsItems);
+    print('added quick actions');
+  }
+
+  Future<void> _removeQuickActions() async {
+    if (_quickActions != null) {
+      await _quickActions.setShortcutItems([]);
+    }
   }
 
   void _initMessaging() {
@@ -98,7 +153,8 @@ class ProviderAccount with ChangeNotifier {
       throw (AppException(title,
           'Location services are not enabled for this device. To receive Departure Alerts turn on location services in system settings.'));
     }
-    PermissionStatus permissionStatus = await LocationPermissions().requestPermissions();
+    PermissionStatus permissionStatus =
+        await LocationPermissions().requestPermissions();
 
     // PermissionStatus permissionStatus =
     //     await LocationPermissions().checkPermissionStatus();
@@ -135,8 +191,7 @@ class ProviderAccount with ChangeNotifier {
       print('geofence ready');
     } on AppException catch (error) {
       _initErrors.add(error.message);
-    }
-    catch (error) {
+    } catch (error) {
       _initErrors.add('Error Initializing Geofencing: ${error.toString()}');
     }
   }
@@ -329,41 +384,38 @@ class ProviderAccount with ChangeNotifier {
     return deviceSelectById(deviceId);
   }
 
-  Future<void> deviceSelectById(deviceId) {
+  Future<void> deviceSelectById(deviceId) async {
     if (deviceId == _selectedDeviceId) {
-      return Future.value();
+      return;
     }
-    return updateSelection(deviceId).then((_) {
-      return _providerDeviceStatus.update();
-    });
+    await updateSelection(deviceId);
+    return _providerDeviceStatus.update();
   }
 
-  Future<bool> signup(String username, String password) {
-    return _particleAccount.signup(username, password).then((result) {
-      _storage.setString(STKEY_ACCEMAIL, username);
-      _storage.setString(STKEY_AUTHTOKEN, _particleAccount.token);
-      _localAuth = false;
-      return result;
-    });
+  Future<bool> signup(String username, String password) async {
+    final bool result = await _particleAccount.signup(username, password);
+    _storage.setString(STKEY_ACCEMAIL, username);
+    _storage.setString(STKEY_AUTHTOKEN, _particleAccount.token);
+    _localAuth = false;
+    return result;
   }
 
-  Future<bool> login(String username, String password) {
-    return _particleAccount.login(username, password).then((result) {
-      _storage.setString(STKEY_ACCEMAIL, username);
-      _storage.setString(STKEY_AUTHTOKEN, _particleAccount.token);
-      _localAuth = false;
-      return result;
-    });
+  Future<bool> login(String username, String password) async {
+    final bool result = await _particleAccount.login(username, password);
+    _storage.setString(STKEY_ACCEMAIL, username);
+    _storage.setString(STKEY_AUTHTOKEN, _particleAccount.token);
+    _localAuth = false;
+    return result;
   }
 
-  Future<bool> logout() {
-    return _particleAccount.logout().then((result) {
-      _storage.remove(STKEY_SELECTEDID);
-      clearDeviceCache();
-      _storage.remove(STKEY_AUTHTOKEN);
-      stopTimer();
-      return result;
-    });
+  Future<bool> logout() async {
+    final bool result = await _particleAccount.logout();
+    _storage.remove(STKEY_SELECTEDID);
+    clearDeviceCache();
+    await _removeQuickActions();
+    _storage.remove(STKEY_AUTHTOKEN);
+    stopTimer();
+    return result;
   }
 
   Future<bool> resetPassword(String email) {
@@ -445,6 +497,7 @@ class ProviderAccount with ChangeNotifier {
   Future<void> _onDevicesLoaded() async {
     print('devices loaded: ${_devices.length}');
     _appendLocationData();
+    await _initQuickActions();
     await updateSelection(null);
     _isUpdatingDevices = false;
     notifyListeners();
@@ -700,6 +753,10 @@ class ProviderAccount with ChangeNotifier {
   }
 
   String get accountEmail {
+    if (_storage == null) {
+      print('calling storage before init');
+      return null;
+    }
     return _storage.getString(STKEY_ACCEMAIL);
   }
 

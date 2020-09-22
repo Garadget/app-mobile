@@ -66,11 +66,15 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     Widget body;
-
     if (_errorMessage != null) {
       body = NetworkError(_errorMessage);
       _errorMessage = null;
     } else if (_account.isUpdatingDevices) {
+      return BusyScreen('Loading...');
+    } else if (!_account.isAuthenticated) {
+      Future.delayed(Duration.zero, () {
+        handleAuthStatus(context);
+      });
       return BusyScreen('Loading...');
     } else if (MediaQuery.of(context).orientation == Orientation.landscape) {
       body = _buildLandscape(context);
@@ -100,8 +104,7 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
             ),
             onPressed: () {
               _account.stopTimer();
-              Navigator.of(context)
-                  .pushReplacementNamed(
+              Navigator.of(context).pushReplacementNamed(
                 ScreenDeviceAddIntro.routeName,
               );
             },
@@ -161,6 +164,10 @@ class _ScreenHomeState extends State<ScreenHome> with WidgetsBindingObserver {
       },
       onRetry: () => mounted,
     );
+    handleAuthStatus(context);
+  }
+
+  void handleAuthStatus(context) {
     String routeName;
     if (_account.isAuthenticated) {
       if (_account.devices.length == 0) {

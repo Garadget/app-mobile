@@ -54,7 +54,7 @@ class BusyMessage extends StatelessWidget {
                     const SizedBox(height: 30),
                     Text(
                       message,
-                      style: Theme.of(context).textTheme.body2,
+                      style: Theme.of(context).textTheme.bodyText1,
                     ),
                   ],
                 ),

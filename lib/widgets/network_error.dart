@@ -155,21 +155,21 @@ class NetworkError extends StatelessWidget {
             const SizedBox(height: 15),
             Text(
               errorHeader(message),
-              style: Theme.of(context).textTheme.title,
+              style: Theme.of(context).textTheme.headline6,
             ),
             const SizedBox(height: 10),
             Text(
               MESSAGE_ERROR,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.body2,
+              style: Theme.of(context).textTheme.bodyText1,
             ),
             const SizedBox(height: 10),
             Text(
               'Technical Details: $message',
-              style: Theme.of(context).textTheme.body2,
+              style: Theme.of(context).textTheme.bodyText1,
             ),
             FlatButton(
-              child: const Text('SERICE STATUS'),
+              child: const Text('SERVICE STATUS'),
               onPressed: () {
                 canLaunch(URL_SERVER_STATUS).then((ok) {
                   if (ok) {
@@ -199,13 +199,13 @@ class NetworkError extends StatelessWidget {
             const SizedBox(height: 15),
             Text(
               errorHeader(message),
-              style: Theme.of(context).textTheme.title,
+              style: Theme.of(context).textTheme.headline6,
             ),
             const SizedBox(height: 10),
             Text(
               MESSAGE_ERROR,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.body2,
+              style: Theme.of(context).textTheme.headline6,
             ),
           ],
         ),
@@ -227,19 +227,19 @@ class NetworkError extends StatelessWidget {
             const SizedBox(height: 15),
             Text(
               errorHeader(message),
-              style: Theme.of(context).textTheme.title,
+              style: Theme.of(context).textTheme.headline6,
             ),
             const SizedBox(height: 10),
             Text(
               MESSAGE_INSETUP1,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.body2,
+              style: Theme.of(context).textTheme.bodyText1,
             ),
             const SizedBox(height: 10),
             Text(
               MESSAGE_INSETUP2,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.body2,
+              style: Theme.of(context).textTheme.bodyText1,
             ),
           ],
         ),

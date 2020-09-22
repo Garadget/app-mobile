@@ -34,8 +34,9 @@ class Account with http.BaseClient {
     return post(
       SIGNUPURL,
       headers: <String, String>{
-        'Authorization':
-            'Basic ' + base64Encode(utf8.encode('${secrets.CLIENT_ID}:${secrets.CLIENT_SECRET}')),
+        'Authorization': 'Basic ' +
+            base64Encode(
+                utf8.encode('${secrets.CLIENT_ID}:${secrets.CLIENT_SECRET}')),
       },
       body: {
         'email': username,
@@ -60,8 +61,9 @@ class Account with http.BaseClient {
     return post(
       AUTHURL,
       headers: <String, String>{
-        'Authorization':
-            'Basic ' + base64Encode(utf8.encode('${secrets.CLIENT_ID}:${secrets.CLIENT_SECRET}')),
+        'Authorization': 'Basic ' +
+            base64Encode(
+                utf8.encode('${secrets.CLIENT_ID}:${secrets.CLIENT_SECRET}')),
       },
       body: {
         'grant_type': 'password',
@@ -145,8 +147,9 @@ class Account with http.BaseClient {
     if (url != AUTHURL && url != SIGNUPURL) {
       request.headers['Authorization'] = 'Bearer $_authToken';
     }
-    return httpClient.send(request).timeout(Duration(seconds: REQUEST_TIMEOUT), onTimeout: () {
-      throw('timeout');
+    return httpClient.send(request).timeout(Duration(seconds: REQUEST_TIMEOUT),
+        onTimeout: () {
+      throw ('timeout');
     });
   }
 
@@ -224,10 +227,7 @@ class Device {
   }
 
   Future<bool> unclaim() {
-    return account
-        .delete(
-            '${Account.BASEURL}/devices/$id')
-        .then((response) {
+    return account.delete('${Account.BASEURL}/devices/$id').then((response) {
       var body = account.parseResponse(response) as Map<String, dynamic>;
       return body['ok'];
     });

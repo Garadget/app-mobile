@@ -92,7 +92,7 @@ class _WidgetDeviceCarouselItemState extends State<WidgetDeviceCarouselItem> {
                   fit: BoxFit.contain,
                   child: Text(
                     widget.device.name,
-                    style: Theme.of(context).textTheme.headline,
+                    style: Theme.of(context).textTheme.headline5,
                   ),
                 ),
               ),
@@ -102,7 +102,7 @@ class _WidgetDeviceCarouselItemState extends State<WidgetDeviceCarouselItem> {
                   fit: BoxFit.contain,
                   child: Text(
                     widget.device.doorStatusString,
-                    style: Theme.of(context).textTheme.subtitle,
+                    style: Theme.of(context).textTheme.bodyText1,
                   ),
                 ),
               ),

@@ -11,38 +11,34 @@ description: Garadget App
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 2.0.5+11
+version: 2.0.6+15
 
 environment:
-  sdk: ">=2.3.0 <3.0.0"
+  sdk: ">=2.7.0 <3.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  flutter_svg: ^0.17.4
+  flutter_svg: ^0.18.0
 #  carousel_slider: ^1.3.0
-  flare_flutter: ^2.0.3
-  provider: ^4.0.5
-  http: ^0.12.0+4
-  shared_preferences: ^0.5.7
+  flare_flutter: ^2.0.6
+  provider: ^4.3.2
+  http: ^0.12.2
+  shared_preferences: ^0.5.8
   flutter_time_picker_spinner: ^1.0.6
-  url_launcher: ^5.4.2
-  package_info: ^0.4.0+17
-  local_auth: ^0.6.2+1
-  firebase_messaging: ^6.0.13
-  location_permissions: ^2.0.5
-  geolocator: ^5.3.1
-  # geolocator:
-  #   path: ./lib/packages/flutter-geolocator
-  
-  google_maps_flutter: ^0.5.27
+  url_launcher: ^5.5.0
+  package_info: ^0.4.1
+  local_auth: ^0.6.2+3
+  firebase_messaging: ^6.0.16
+  location_permissions: ^3.0.0+1 #2.0.5 #
+  geolocator: ^5.3.2+2
+  google_maps_flutter: ^0.5.30
   latlong: ^0.6.1
-  flutter_local_notifications: ^1.4.2
+  flutter_local_notifications: ^1.4.4+3
   particle_setup: ^0.3.0
-  # particle_setup:
-  #   path: ./lib/packages/particle_setup
+  quick_actions: ^0.4.0+6
 
 dev_dependencies:
   flutter_test:

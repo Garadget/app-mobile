@@ -451,7 +451,7 @@ class Device {
       return Future.value(GeofenceStatus.DISABLED);
     }
     final double doorLat = getValue('geo/latitude');
-    final double doorLon =  getValue('geo/longitude');
+    final double doorLon = getValue('geo/longitude');
     double radius = getValue('geo/radius');
 
     if (doorLat == null || doorLon == null || radius == null) {
@@ -465,10 +465,10 @@ class Device {
       getValue('geo/longitude'),
     );
     GeofenceStatus newStatus;
-    
+
     final outside = distance > radius;
     final inside = !outside && distance <= radius * GEO_RADIUSDIFF;
-    
+
     switch (_geoStatus) {
       case GeofenceStatus.ENTER:
       case GeofenceStatus.IN:

@@ -25,7 +25,7 @@ class SettingsItem extends StatelessWidget {
       items.add(
         Text(
           value,
-          style: Theme.of(context).textTheme.body2,
+          style: Theme.of(context).textTheme.bodyText1,
           softWrap: false,
           overflow: TextOverflow.fade,
         ),
@@ -41,7 +41,7 @@ class SettingsItem extends StatelessWidget {
         Icon(
           icon,
           size: 24,
-          color: Theme.of(context).textTheme.body2.color,
+          color: Theme.of(context).textTheme.bodyText1.color,
         ),
       );
     } else {

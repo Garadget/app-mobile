@@ -9,7 +9,7 @@ class SettingsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    TextStyle style = Theme.of(context).textTheme.subtitle;
+    TextStyle style = Theme.of(context).textTheme.bodyText1;
     Widget content = Text(
       title,
       style: style,

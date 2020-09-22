@@ -110,12 +110,12 @@ class WidgetCardTile extends StatelessWidget {
           children: <Widget>[
             Text(
               title,
-              style: Theme.of(context).textTheme.headline,
+              style: Theme.of(context).textTheme.headline5,
               softWrap: false,
             ),
             Text(
               subtitle,
-              style: Theme.of(context).textTheme.subtitle,
+              style: Theme.of(context).textTheme.caption,
               softWrap: false,
             ),
           ],

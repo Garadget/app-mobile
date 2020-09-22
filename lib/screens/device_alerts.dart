@@ -605,10 +605,10 @@ class _ScreenDeviceAlertsState extends State<ScreenDeviceAlerts> {
     final timePicker = TimePickerSpinner(
       time: _intToTime(value),
       is24HourMode: format24h,
-      normalTextStyle: Theme.of(context).textTheme.body2,
+      normalTextStyle: Theme.of(context).textTheme.bodyText1,
       highlightedTextStyle: Theme.of(context)
           .textTheme
-          .title
+          .headline6
           .copyWith(fontWeight: FontWeight.bold),
 //        spacing: 50,
       itemHeight: 40,

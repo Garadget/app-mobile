@@ -117,7 +117,7 @@ class WidgetDrawerHeader extends StatelessWidget {
         children: <Widget>[
           SvgPicture.asset(
             'assets/images/logo-boxed.svg',
-            color: Theme.of(context).primaryTextTheme.title.color,
+            color: Theme.of(context).primaryTextTheme.headline6.color,
             height: 30.0,
             width: 30.0,
             allowDrawingOutsideViewBox: true,
@@ -127,7 +127,7 @@ class WidgetDrawerHeader extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 0),
             child: Text(
               text,
-              style: Theme.of(context).primaryTextTheme.title,
+              style: Theme.of(context).primaryTextTheme.headline6,
             ),
           ),
         ],

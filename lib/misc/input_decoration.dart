@@ -21,7 +21,6 @@ class InputTheme {
       focusedBorder: inputNormalBorder,
       errorBorder: inputErrorBorder,
       focusedErrorBorder: inputErrorBorder,
-      hasFloatingPlaceholder: true,
     );
   }
 }

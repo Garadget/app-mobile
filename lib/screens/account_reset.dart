@@ -132,7 +132,7 @@ class _ScreenAccountResetState extends State<ScreenAccountReset> {
       focusedBorder: inputNormalBorder,
       errorBorder: inputErrorBorder,
       focusedErrorBorder: inputErrorBorder,
-      hasFloatingPlaceholder: true,
+//      floatingLabelBehavior: FloatingLabelBehavior.auto, // todo: check
     );
 
     final isKeyboardVisible = MediaQuery.of(context).viewInsets.bottom > 0 ||

@@ -36,7 +36,7 @@ class SettingsSelect extends StatelessWidget {
               child: Text(
                 value == null ? 'Select ' + label : value['text'],
                 textAlign: TextAlign.end,
-                style: Theme.of(context).textTheme.body2,
+                style: Theme.of(context).textTheme.bodyText1,
                 softWrap: false,
                 overflow: TextOverflow.fade,
               ),
@@ -48,7 +48,7 @@ class SettingsSelect extends StatelessWidget {
             Icon(
               Icons.chevron_right,
               size: 24,
-              color: Theme.of(context).textTheme.body2.color,
+              color: Theme.of(context).textTheme.bodyText1.color,
             ),
           ],
         ),

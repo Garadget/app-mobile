@@ -53,20 +53,22 @@ class App extends StatelessWidget {
           fontFamily: 'Roboto',
 //        accentColor: Colors.white,
           textTheme: TextTheme(
-            headline: TextStyle(
+            headline5: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.bold,
             ),
-            // grey smaller size text used for notes
-            subtitle: TextStyle(
-              fontSize: 12,
+            // default text style
+            bodyText2: TextStyle(),
+            // grey standard size text used for values
+            bodyText1: TextStyle(
+//              fontSize: 12,
               height: 1,
               color: Colors.grey,
             ),
-            // grey standard size text used for values
-            body2: TextStyle(
+            // grey smaller size text used for notes
+            caption: TextStyle(
               color: Colors.grey,
-            ),
+            )
           ),
           buttonTheme: ButtonThemeData(
             textTheme: ButtonTextTheme.primary,
